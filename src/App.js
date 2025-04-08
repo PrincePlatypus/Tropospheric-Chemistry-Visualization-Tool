@@ -4,25 +4,28 @@ import MapView from './components/Map/MapView';
 import DailyChart from './components/Charts/DailyChart';
 import MonthlyChart from './components/Charts/MonthlyChart';
 import HourlyChart from './components/Charts/HourlyChart';
-import { VARIABLES } from './config/variables';
+import { APP_CONFIG } from './config/appConfig';
 
 function App() {
-  // Initial configuration
-  const INITIAL_DATE = new Date(2024, 8, 21); // September 21, 2024
+  // Replace hardcoded constants with appConfig values
+  
+  // Initial configuration from appConfig
+  const mapDefaultView = APP_CONFIG.components.map.defaultView;
+  const INITIAL_DATE = APP_CONFIG.general.defaultState.date;
   const INITIAL_LOCATION = {
-    latitude: 40.7128,  // New York City coordinates as example
-    longitude: -74.0060
+    latitude: mapDefaultView.center[1],  // Convert from [lon, lat] to {latitude, longitude}
+    longitude: mapDefaultView.center[0]
   };
-  const INITIAL_VARIABLE = 'NO2';
+  const INITIAL_VARIABLE = APP_CONFIG.general.defaultState.variable;
+  const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
 
-  // State with initial values
+  // State with initial values (unchanged, just using new constant sources)
   const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
   const [selectedLocation, setSelectedLocation] = useState(INITIAL_LOCATION);
   const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
   const [selectedYear, setSelectedYear] = useState(INITIAL_DATE.getFullYear());
   const [pixelValue, setPixelValue] = useState(null);
   const [view, setView] = useState(null);
-  const MOVING_AVERAGE_RANGE = 4; // 4 hours total range (±2 hours)
   const [hourlyChartData, setHourlyChartData] = useState(null);
   const [monthlyChartData, setMonthlyChartData] = useState(null);
   const [dailyChartData, setDailyChartData] = useState([]); // Initialize as empty array
@@ -30,9 +33,9 @@ function App() {
   // Add ref for MapView component
   const mapViewRef = useRef(null);
 
-  // Function to get the correct unit label
+  // Function to get the correct unit label - replace with appConfig
   const getUnitLabel = (variable) => {
-    return variable === 'NO2' ? 'ppb' : 'ppt';
+    return APP_CONFIG.variables[variable].units;
   };
 
   // Generate test data for each chart type
@@ -248,11 +251,39 @@ function App() {
     cursor: 'pointer'
   };
 
-  // Generate year options
-  const years = Array.from(
-    { length: 5 }, 
-    (_, i) => new Date().getFullYear() - i
-  );
+  // Create list of available years (from today back X years)
+  const currentYear = new Date().getFullYear();
+  // Use yearSelectorRange from appConfig instead of hardcoded 5
+  const yearRange = APP_CONFIG.general.yearSelectorRange;
+  const years = Array.from({ length: yearRange + 1 }, (_, i) => currentYear - i);
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+  };
+
+  const handleLocationChange = (location) => {
+    setSelectedLocation(location);
+  };
+
+  const handleVariableChange = (variable) => {
+    setSelectedVariable(variable);
+  };
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+  };
+
+  // Extract UI theme colors from appConfig
+  const {
+    backgroundPrimary,
+    backgroundSecondary,
+    accent,
+    border,
+    text
+  } = APP_CONFIG.general.ui.theme;
+
+  // Extract UI text from appConfig
+  const UIText = APP_CONFIG.general.text;
 
   const contentContainerStyle = {
     flex: '1 1 auto',
@@ -384,10 +415,6 @@ function App() {
     border: 'none'
   };
 
-  const handleYearChange = (increment) => {
-    setSelectedYear(prev => prev + increment);
-  };
-
   const getOrdinalSuffix = (day) => {
     if (day > 3 && day < 21) return 'th';
     switch (day % 10) {
@@ -466,7 +493,7 @@ function App() {
     : 'No date selected';
 
   return (
-    <CalciteShell>
+    <CalciteShell style={{ width: '100vw', height: '100vh', backgroundColor: backgroundPrimary }}>
       <div style={mainContainerStyle}>
         {/* Header Container - Now only contains the title bar */}
         <div style={headerContainerStyle}>
@@ -474,18 +501,15 @@ function App() {
           <div style={titleBarStyle}>
             <div style={titleStyle}>NO2 and HCHO</div>
             <div style={buttonGroupStyle}>
-              <button 
-                style={buttonStyle(selectedVariable === 'NO2')}
-                onClick={() => setSelectedVariable('NO2')}
-              >
-                NO2
-              </button>
-              <button 
-                style={buttonStyle(selectedVariable === 'HCHO')}
-                onClick={() => setSelectedVariable('HCHO')}
-              >
-                HCHO
-              </button>
+              {Object.keys(APP_CONFIG.variables).map(variable => (
+                <button
+                  key={variable}
+                  style={buttonStyle(selectedVariable === variable)}
+                  onClick={() => handleVariableChange(variable)}
+                >
+                  {APP_CONFIG.variables[variable].displayName}
+                </button>
+              ))}
             </div>
             <button style={howToButtonStyle}>How to</button>
           </div>
@@ -499,12 +523,12 @@ function App() {
             <div style={controlsContainerStyle}>
               {/* Date */}
               <div style={controlItemStyle}>
-                <span>Date: {dateDisplay}</span>
+                <span>{UIText.labels.date}: {dateDisplay}</span>
               </div>
 
               {/* Location */}
               <div style={controlItemStyle}>
-                <span>Location: {locationDisplay}</span>
+                <span>{UIText.labels.location}: {locationDisplay}</span>
               </div>
 
               {/* Year Selector */}
@@ -552,9 +576,9 @@ function App() {
               {/* Value */}
               <div style={controlItemStyle}>
                 {pixelValue ? (
-                  <span>Value: {pixelValue} {getUnitLabel(selectedVariable)}</span>
+                  <span>{UIText.labels.value}: {pixelValue.toFixed(APP_CONFIG.components.charts.common.valuePrecision)} {getUnitLabel(selectedVariable)}</span>
                 ) : (
-                  <span>Loading initial data...</span>
+                  <span>{UIText.status.loadingInitialData}</span>
                 )}
               </div>
             </div>
@@ -564,7 +588,7 @@ function App() {
               <DailyChart 
                 data={dailyChartData} 
                 selectedVariable={selectedVariable}
-                variableConfig={VARIABLES[selectedVariable]}
+                variableConfig={APP_CONFIG.variables[selectedVariable]}
                 onDateSelect={handleDateSelect}
                 selectedYear={selectedYear}
               />
@@ -575,7 +599,7 @@ function App() {
               <MonthlyChart 
                 data={monthlyChartData || generateChartData('monthly')} 
                 selectedVariable={selectedVariable}
-                variableConfig={VARIABLES[selectedVariable]}
+                variableConfig={APP_CONFIG.variables[selectedVariable]}
               />
             </div>
           </div>
@@ -611,7 +635,7 @@ function App() {
                   border: '1px solid #C77A41',
                   zIndex: 2
                 }}>
-                  Value: {pixelValue} {getUnitLabel(selectedVariable)}
+                  {UIText.labels.value} {pixelValue.toFixed(APP_CONFIG.components.charts.common.valuePrecision)} {getUnitLabel(selectedVariable)}
                 </div>
               )}
             </div>
@@ -621,7 +645,7 @@ function App() {
               <HourlyChart 
                 data={hourlyChartData || generateChartData('hourly')} 
                 selectedVariable={selectedVariable}
-                variableConfig={VARIABLES[selectedVariable]}
+                variableConfig={APP_CONFIG.variables[selectedVariable]}
                 selectedDate={selectedDate}
               />
             </div>

@@ -93,6 +93,9 @@ export const APP_CONFIG = {
       // Chart settings specific to this variable
       chartSettings: {
         monthlyColor: '#C77A41', // src/components/Map/MapView.jsx:L415
+        // Daily chart (heatmap) color ramp
+        dailyColorStart: [189, 175, 129, 255], // src/components/Charts/DailyChart.jsx:L68
+        dailyColorEnd: [37, 11, 47, 255], // src/components/Charts/DailyChart.jsx:L69
         // Add other variable-specific chart settings here if needed
       },
       // Title used in the map legend - src/components/Map/MapView.jsx:L39
@@ -119,6 +122,9 @@ export const APP_CONFIG = {
       // Chart settings specific to this variable
       chartSettings: {
         monthlyColor: '#63ABBB', // src/components/Map/MapView.jsx:L415
+        // Daily chart (heatmap) color ramp (Example: using a blue ramp)
+        dailyColorStart: [222, 235, 247, 255], // Light Blue
+        dailyColorEnd: [49, 130, 189, 255],   // Dark Blue
         // Add other variable-specific chart settings here if needed
       },
       // Title used in the map legend - src/components/Map/MapView.jsx:L39
@@ -182,8 +188,7 @@ export const APP_CONFIG = {
       },
       // Settings specific to the Daily Chart (Heatmap)
       daily: {
-        colorStart: [189, 175, 129, 255], // src/components/Charts/DailyChart.jsx:L68
-        colorEnd: [37, 11, 47, 255], // src/components/Charts/DailyChart.jsx:L69
+        // Note: colorStart and colorEnd moved to variables[VAR].chartSettings
         valueMax: 300, // Max value used for color scaling - src/components/Charts/DailyChart.jsx:L70
         weekLabelInterval: 5, // How often to show week number labels - src/components/Charts/DailyChart.jsx:L93
         dayLabelWidthPx: 20, // Fixed width for day labels column - src/components/Charts/DailyChart.jsx:L5
