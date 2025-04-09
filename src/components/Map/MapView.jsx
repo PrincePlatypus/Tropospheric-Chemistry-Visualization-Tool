@@ -28,11 +28,6 @@ const MapView = forwardRef(({
   const viewRef = useRef(null);
   const websceneRef = useRef(null);
 
-  // Add this at the top level just inside the component
-  console.log('🔴 MAPVIEW: Component rendering with props', { 
-    selectedDate, selectedVariable, selectedYear 
-  });
-
   // Function to create legend
   const createLegend = async (layer) => {
     await layer.load();
@@ -191,7 +186,7 @@ const MapView = forwardRef(({
   };
 
   // Add this new function
-  const fetchHourlyRangeData = async (location, centerDate, variable) => {
+  const fetchHourlyRangeData = async (location, date, variable) => {
     const hourlyGroup = layersRef.current.hourlyGroup;
     if (hourlyGroup) {
       const activeLayer = hourlyGroup.layers.find(layer => 
@@ -201,12 +196,12 @@ const MapView = forwardRef(({
       if (activeLayer) {
         try {
           // Create dates for 3 days before and 3 days after
-          const startDate = new Date(centerDate);
-          startDate.setDate(startDate.getDate() - 3);
+          const startDate = new Date(date);
+          startDate.setDate(date.getDate() - APP_CONFIG.components.charts.hourly.dataFetchDaysRange);
           startDate.setHours(0, 0, 0, 0);
           
-          const endDate = new Date(centerDate);
-          endDate.setDate(endDate.getDate() + 3);
+          const endDate = new Date(date);
+          endDate.setDate(date.getDate() + APP_CONFIG.components.charts.hourly.dataFetchDaysRange);
           endDate.setHours(23, 59, 59, 999);
 
           const response = await activeLayer.getSamples({
@@ -265,7 +260,7 @@ const MapView = forwardRef(({
 
             // Calculate moving average for each hour
             const calculateMovingAverage = (hour, allValues) => {
-              const HOURS_RANGE = 0.5; // ±2 hours range
+              const HOURS_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
               let sum = 0;
               let count = 0;
 
@@ -318,7 +313,7 @@ const MapView = forwardRef(({
                 return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
               }),
               datasets: Object.entries(groupedByDay).map(([day, values], index) => {
-                const isSelectedDay = new Date(centerDate).toLocaleDateString('en-US', { 
+                const isSelectedDay = new Date(date).toLocaleDateString('en-US', { 
                   month: 'short', 
                   day: 'numeric'
                 }) === day;
@@ -332,7 +327,7 @@ const MapView = forwardRef(({
                     x: v.exactTime,
                     y: v.value
                   })),
-                  borderColor: isSelectedDay ? '#C77A41' : '#666666',
+                  borderColor: isSelectedDay ? APP_CONFIG.general.ui.theme.accent : '#666666',
                   borderWidth: isSelectedDay ? 2 : 1,
                   tension: 0.1,
                   fill: false,
@@ -394,9 +389,9 @@ const MapView = forwardRef(({
 
             // Add moving average to datasets
             chartData.datasets.push({
-              label: '1hr Moving Average',
+              label: APP_CONFIG.components.charts.hourly.text.legend.movingAverage.replace('${range}', APP_CONFIG.components.charts.hourly.movingAverageHoursRange),
               data: movingAverages,
-              borderColor: '#00ff00',
+              borderColor: APP_CONFIG.general.ui.theme.chartMovingAverage,
               borderWidth: 2,
               borderDash: [5, 5],
               tension: 0.3,
@@ -478,8 +473,8 @@ const MapView = forwardRef(({
                   }
                   return null;
                 }),
-                borderColor: variable === 'NO2' ? '#C77A41' : '#63ABBB',
-                backgroundColor: variable === 'NO2' ? '#C77A41' : '#63ABBB'
+                borderColor: variable === 'NO2' ? APP_CONFIG.general.ui.theme.accent : '#63ABBB',
+                backgroundColor: variable === 'NO2' ? APP_CONFIG.general.ui.theme.accent : '#63ABBB'
               }]
             };
             
@@ -500,7 +495,7 @@ const MapView = forwardRef(({
     if (!dailyGroup) return;
     
     // Get the layer title from appConfig based on the variable
-    const layerTitle = APP_CONFIG.webscene.layers[variable].daily.title;
+    const layerTitle = APP_CONFIG.variables[variable].layers.daily.title;
     
     const activeLayer = dailyGroup.layers.find(layer => 
       layer.title === layerTitle
@@ -510,8 +505,6 @@ const MapView = forwardRef(({
       try {
         const startDate = new Date(year, 0, 1);
         const endDate = new Date(year, 11, 31, 23, 59, 59);
-        
-        console.log(`📊 Fetching daily data for ${variable} - ${layerTitle}`);
         
         const response = await activeLayer.getSamples({
           geometry: {
@@ -554,7 +547,6 @@ const MapView = forwardRef(({
 
           // Sort by date
           dailyData.sort((a, b) => a.date - b.date);
-          console.log(`📊 Daily data retrieved for ${variable}: ${dailyData.length} samples`);
           
           onDailyDataUpdate(dailyData);
         }
@@ -570,24 +562,20 @@ const MapView = forwardRef(({
 
   // Modify the effect that initializes the view to run only once
   useEffect(() => {
-    console.log('🟣 MAPVIEW: Scene initialization effect');
-    
     if (viewRef.current) {
-      console.log('🟣 MAPVIEW: View already exists, skipping initialization');
       return;
     }
 
     const container = mapDiv.current;
     
     if (!container) {
-      console.log('🟣 MAPVIEW: No container ref, skipping initialization');
       return;
     }
 
     // Create the WebScene
     const webscene = new WebScene({
       portalItem: {
-        id: APP_CONFIG.webscene.portalItem.id
+        id: APP_CONFIG.components.map.websceneId
       }
     });
     websceneRef.current = webscene;
@@ -609,8 +597,6 @@ const MapView = forwardRef(({
     
     // Wait for both view and webscene to load
     Promise.all([view.when(), webscene.load()]).then(async () => {
-      console.log('🟢 MAPVIEW: SceneView initialized');
-      
       // Log all layers in detail
       console.log('🔍 DETAILED LAYER STRUCTURE:', webscene.allLayers.map(layer => ({
         id: layer.id,
@@ -679,8 +665,8 @@ const MapView = forwardRef(({
       // Add Home Widget
       initializeWidget(Home).then(home => {
         home.container.style.cssText = `
-          background-color: #1C243B !important;
-          color: #efefef !important;
+          background-color: ${APP_CONFIG.general.ui.theme.backgroundPrimary} !important;
+          color: ${APP_CONFIG.general.ui.theme.text} !important;
         `;
         controlsContainer.appendChild(home.container);
         
@@ -688,8 +674,8 @@ const MapView = forwardRef(({
         return initializeWidget(Compass);
       }).then(compass => {
         compass.container.style.cssText = `
-          background-color: #1C243B !important;
-          color: #efefef !important;
+          background-color: ${APP_CONFIG.general.ui.theme.backgroundPrimary} !important;
+          color: ${APP_CONFIG.general.ui.theme.text} !important;
         `;
         controlsContainer.appendChild(compass.container);
 
@@ -717,8 +703,8 @@ const MapView = forwardRef(({
         button.style.cssText = `
           width: 32px;
           height: 32px;
-          background-color: #1C243B !important;
-          color: #efefef !important;
+          background-color: ${APP_CONFIG.general.ui.theme.backgroundPrimary} !important;
+          color: ${APP_CONFIG.general.ui.theme.text} !important;
           border: none;
           display: flex;
           align-items: center;
@@ -740,8 +726,8 @@ const MapView = forwardRef(({
         left: 0;
         right: 0;
         padding: 8px;
-        background-color: rgba(28, 36, 59, 0.8);
-        color: #efefef;
+        background-color: ${APP_CONFIG.general.ui.theme.backgroundPrimary};
+        color: ${APP_CONFIG.general.ui.theme.text};
         font-size: 12px;
         text-align: center;
         z-index: 99;
@@ -785,8 +771,8 @@ const MapView = forwardRef(({
         bottom: 40px;
         right: 10px;
         padding: 4px 8px;
-        background-color: rgba(28, 36, 59, 0.8);
-        color: #efefef;
+        background-color: ${APP_CONFIG.general.ui.theme.backgroundPrimary};
+        color: ${APP_CONFIG.general.ui.theme.text};
         font-size: 12px;
         border-radius: 4px;
         display: none;
@@ -970,89 +956,6 @@ const MapView = forwardRef(({
     },
     updateLayerTimeExtent
   }));
-
-  // Add this effect near the end of the component to run once on initialization
-  useEffect(() => {
-    // Only run once when the webscene and view are ready
-    if (!websceneRef.current || !viewRef.current || !layersRef.current.dailyGroup) {
-      return;
-    }
-
-    // Demo function to fetch HCHO Daily samples using initial conditions
-    const fetchHCHODailySampleDemo = async () => {
-      try {
-        // Get the HCHO Daily layer
-        const dailyGroup = layersRef.current.dailyGroup;
-        const hchoLayer = dailyGroup.layers.find(layer => 
-          layer.title === APP_CONFIG.webscene.layers.HCHO.daily.title
-        );
-        
-        if (!hchoLayer) {
-          console.log('❌ HCHO Daily layer not found for sample demonstration');
-          return;
-        }
-        
-        // Use the initial location and year
-        const initialLocation = {
-          type: "point",
-          longitude: APP_CONFIG.defaultState.view.center[0],
-          latitude: APP_CONFIG.defaultState.view.center[1],
-          spatialReference: { wkid: 4326 }
-        };
-        
-        const initialYear = APP_CONFIG.defaultState.year;
-        const startDate = new Date(initialYear, 0, 1);
-        const endDate = new Date(initialYear, 11, 31, 23, 59, 59);
-        
-        console.log('🔍 DEMO: Fetching HCHO Daily sample with:', {
-          location: initialLocation,
-          timeExtent: { start: startDate, end: endDate }
-        });
-        
-        // Call getSamples with the initial conditions
-        const response = await hchoLayer.getSamples({
-          geometry: initialLocation,
-          timeExtent: {
-            start: startDate,
-            end: endDate
-          },
-          returnFirstValueOnly: false
-        });
-        
-        // Log the complete response
-        console.log('🔍 DEMO: HCHO Daily sample response:', response);
-        
-        // Process and log a sample of the data
-        if (response?.samples && response.samples.length > 0) {
-          const attributeName = 'HCHO';
-          
-          // Process the first 5 samples to show the structure
-          const sampleData = response.samples.slice(0, 5).map(sample => {
-            const rawValue = sample.attributes[attributeName];
-            const date = new Date(sample.attributes.StdTime);
-            
-            return {
-              date: date.toISOString(),
-              rawValue,
-              processedValue: Number(rawValue) * 1e-17, // HCHO conversion factor
-              attributes: sample.attributes
-            };
-          });
-          
-          console.log(`🔍 DEMO: HCHO Daily sample data (first 5 of ${response.samples.length}):`, sampleData);
-        } else {
-          console.log('🔍 DEMO: No samples returned for HCHO Daily');
-        }
-      } catch (error) {
-        console.error('❌ DEMO: Error fetching HCHO Daily sample:', error);
-      }
-    };
-    
-    // Run the demo after a short delay to ensure everything is loaded
-    setTimeout(fetchHCHODailySampleDemo, 5000);
-    
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [websceneRef.current, viewRef.current, layersRef.current.dailyGroup]);
 
   return (
     <div ref={mapDiv} style={{ 
