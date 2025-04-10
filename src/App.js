@@ -68,6 +68,10 @@ function App() {
     }
   };
 
+  // Define grid proportions as variables
+  const leftColumnWidth = 45;
+  const rightColumnWidth = 55;
+
   const mainContainerStyle = {
     display: 'flex',
     flexDirection: 'column',
@@ -139,7 +143,7 @@ function App() {
   const contentContainerStyle = {
     flex: '1 1 auto',
     display: 'grid',
-    gridTemplateColumns: '45fr 55fr',
+    gridTemplateColumns: `${leftColumnWidth}fr ${rightColumnWidth}fr`,
     gap: '4px',
     padding: '4px',
     backgroundColor: '#1C243B',
@@ -202,14 +206,14 @@ function App() {
     justifyContent: 'center'
   };
 
-  // Add this new ghost container style
+  // Update the mapGhostContainerStyle to be more dynamic
   const mapGhostContainerStyle = {
     position: 'absolute',
     height: '100%',
-    width: '181.82%',  // This is roughly 100/55 to match the content container's full width
+    width: `${(100 * (leftColumnWidth + rightColumnWidth) / rightColumnWidth)}%`,
     left: '50%',
-    transform: 'translateX(-50%)',  // Center the ghost container
-    overflow: 'hidden'  // Hide the overflow
+    transform: 'translateX(-50%)',
+    overflow: 'hidden'
   };
 
   const titleStyle = {
