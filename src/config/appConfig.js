@@ -13,6 +13,11 @@ export const APP_CONFIG = {
       variable: 'NO2', // Default variable selected ('NO2' or 'HCHO') - src/config/appConfig.js:L43 | src/App.js:L15
       year: new Date().getFullYear(), // Default year selected - src/config/appConfig.js:L44 | src/App.js:L20
       date: new Date(2024, 8, 21), // Default specific date selected - src/config/appConfig.js:L45 | src/App.js:L10
+      view: {
+        center: [-74.0060, 40.7128], // src/config/appConfig.js:L48 | src/App.js:L12 | src/components/Map/MapView.jsx:L687
+        zoom: 10, // src/config/appConfig.js:L49
+        rotation: 0 // src/config/appConfig.js:L50
+      }
     },
     // Number of years to show back from current year in the year selector dropdown
     yearSelectorRange: 5, // src/App.js:L242
@@ -145,12 +150,6 @@ export const APP_CONFIG = {
     map: {
       // ID of the ArcGIS Online WebScene item to load
       websceneId: 'b6662d6616564a1284a5d7835137a493', // src/config/appConfig.js:L4 | src/hooks/useMapView.js:L13
-      // Default map view settings (center is [Longitude, Latitude])
-      defaultView: {
-        center: [-74.0060, 40.7128], // src/config/appConfig.js:L48 | src/App.js:L12 | src/components/Map/MapView.jsx:L687
-        zoom: 10, // src/config/appConfig.js:L49
-        rotation: 0 // src/config/appConfig.js:L50
-      },
       // Tolerance for map click identify operations (in screen pixels)
       identifyTolerance: 2, // src/components/Map/MapView.jsx:L70
       // General titles for layer groups in the WebScene (used to find the groups)

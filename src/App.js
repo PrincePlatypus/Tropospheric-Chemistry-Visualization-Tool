@@ -10,11 +10,10 @@ function App() {
   // Replace hardcoded constants with appConfig values
   
   // Initial configuration from appConfig
-  const mapDefaultView = APP_CONFIG.components.map.defaultView;
   const INITIAL_DATE = APP_CONFIG.general.defaultState.date;
   const INITIAL_LOCATION = {
-    latitude: mapDefaultView.center[1],  // Convert from [lon, lat] to {latitude, longitude}
-    longitude: mapDefaultView.center[0]
+    latitude: APP_CONFIG.general.defaultState.view.center[1],  // Convert from [lon, lat] to {latitude, longitude}
+    longitude: APP_CONFIG.general.defaultState.view.center[0]
   };
   const INITIAL_VARIABLE = APP_CONFIG.general.defaultState.variable;
   const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
@@ -37,6 +36,19 @@ function App() {
   const getUnitLabel = (variable) => {
     return APP_CONFIG.variables[variable].units;
   };
+
+  const yearRange = APP_CONFIG.general.yearSelectorRange;
+  // Extract UI theme colors from appConfig
+  const {
+    backgroundPrimary,
+    backgroundSecondary,
+    accent,
+    border,
+    text
+  } = APP_CONFIG.general.ui.theme;
+
+  // Extract UI text from appConfig
+  const UIText = APP_CONFIG.general.text;
 
   // Generate test data for each chart type
   const generateChartData = (type) => {
@@ -254,7 +266,6 @@ function App() {
   // Create list of available years (from today back X years)
   const currentYear = new Date().getFullYear();
   // Use yearSelectorRange from appConfig instead of hardcoded 5
-  const yearRange = APP_CONFIG.general.yearSelectorRange;
   const years = Array.from({ length: yearRange + 1 }, (_, i) => currentYear - i);
 
   const handleDateChange = (date) => {
@@ -273,17 +284,6 @@ function App() {
     setSelectedYear(year);
   };
 
-  // Extract UI theme colors from appConfig
-  const {
-    backgroundPrimary,
-    backgroundSecondary,
-    accent,
-    border,
-    text
-  } = APP_CONFIG.general.ui.theme;
-
-  // Extract UI text from appConfig
-  const UIText = APP_CONFIG.general.text;
 
   const contentContainerStyle = {
     flex: '1 1 auto',
