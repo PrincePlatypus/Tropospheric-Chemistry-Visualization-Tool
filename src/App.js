@@ -149,7 +149,7 @@ function App() {
 
   const leftContainerStyle = {
     display: 'grid',
-    gridTemplateRows: '10fr 50fr 40fr',
+    gridTemplateRows: '10fr 90fr',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
@@ -157,12 +157,14 @@ function App() {
   };
 
   const rightContainerStyle = {
-    display: 'grid',
-    gridTemplateRows: '60fr 40fr',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
-    backgroundColor: '#1C243B'
+    backgroundColor: '#1C243B',
+    position: 'relative'
   };
 
   const controlsContainerStyle = {
@@ -189,9 +191,25 @@ function App() {
   };
 
   const mapContainerStyle = {
-    ...chartContainerStyle,
-    padding: 0,
-    position: 'relative'
+    flex: 1,
+    backgroundColor: '#1C243B',
+    padding: '4px',
+    borderRadius: '2px',
+    position: 'relative',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
+
+  // Add this new ghost container style
+  const mapGhostContainerStyle = {
+    position: 'absolute',
+    height: '100%',
+    width: '181.82%',  // This is roughly 100/55 to match the content container's full width
+    left: '50%',
+    transform: 'translateX(-50%)',  // Center the ghost container
+    overflow: 'hidden'  // Hide the overflow
   };
 
   const titleStyle = {
@@ -468,36 +486,38 @@ function App() {
           <div style={rightContainerStyle}>
             {/* Map */}
             <div style={mapContainerStyle}>
-              <MapView 
-                ref={mapViewRef}
-                onLocationSelect={setSelectedLocation}
-                selectedVariable={selectedVariable}
-                onViewCreated={setView}
-                onPixelValueChange={setPixelValue}
-                selectedDate={selectedDate}
-                selectedYear={selectedYear}
-                initialLocation={INITIAL_LOCATION}
-                initialDate={INITIAL_DATE}
-                onHourlyDataUpdate={handleHourlyDataUpdate}
-                onMonthlyDataUpdate={handleMonthlyDataUpdate}
-                onDailyDataUpdate={handleDailyDataUpdate}
-              />
-              {/* Pixel Value Popup */}
-              {pixelValue && (
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  backgroundColor: 'rgba(28, 36, 59, 0.9)',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  color: '#efefef',
-                  border: '1px solid #C77A41',
-                  zIndex: 2
-                }}>
-                  {uiText.labels.value} {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {variableConfigApp.units}
+                <div style={mapGhostContainerStyle}>
+                    <MapView 
+                        ref={mapViewRef}
+                        onLocationSelect={setSelectedLocation}
+                        selectedVariable={selectedVariable}
+                        onViewCreated={setView}
+                        onPixelValueChange={setPixelValue}
+                        selectedDate={selectedDate}
+                        selectedYear={selectedYear}
+                        initialLocation={INITIAL_LOCATION}
+                        initialDate={INITIAL_DATE}
+                        onHourlyDataUpdate={handleHourlyDataUpdate}
+                        onMonthlyDataUpdate={handleMonthlyDataUpdate}
+                        onDailyDataUpdate={handleDailyDataUpdate}
+                    />
                 </div>
-              )}
+                {/* Pixel Value Popup */}
+                {pixelValue && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        backgroundColor: 'rgba(28, 36, 59, 0.9)',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        color: '#efefef',
+                        border: '1px solid #C77A41',
+                        zIndex: 2
+                    }}>
+                        {uiText.labels.value} {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {variableConfigApp.units}
+                    </div>
+                )}
             </div>
           </div>
         </div>
