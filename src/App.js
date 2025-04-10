@@ -7,18 +7,24 @@ import HourlyChart from './components/Charts/HourlyChart';
 import { APP_CONFIG } from './config/appConfig';
 
 function App() {
-  // Replace hardcoded constants with appConfig values
-  
-  // Initial configuration from appConfig
-  const INITIAL_DATE = APP_CONFIG.general.defaultState.date;
-  const INITIAL_LOCATION = {
-    latitude: APP_CONFIG.general.defaultState.view.center[1],  // Convert from [lon, lat] to {latitude, longitude}
-    longitude: APP_CONFIG.general.defaultState.view.center[0]
-  };
-  const INITIAL_VARIABLE = APP_CONFIG.general.defaultState.variable;
-  const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
+  // APP_CONFIG variables
+  const defaultState = APP_CONFIG.general.defaultState;
+  const yearSelectorRange = APP_CONFIG.general.yearSelectorRange;
+  const uiTheme = APP_CONFIG.general.ui.theme;
+  const uiText = APP_CONFIG.general.text;
+  const chartsConfig = APP_CONFIG.components.charts;
+  const yearSelectorIcons = APP_CONFIG.general.ui.icons.yearSelector;
 
-  // State with initial values (unchanged, just using new constant sources)
+  // Initial configuration from appConfig
+  const INITIAL_DATE = defaultState.date;
+  const INITIAL_LOCATION = {
+    latitude: defaultState.view.center[1],
+    longitude: defaultState.view.center[0]
+  };
+  const INITIAL_VARIABLE = defaultState.variable;
+  const MOVING_AVERAGE_RANGE = chartsConfig.hourly.movingAverageHoursRange;
+
+  // State with initial values
   const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
   const [selectedLocation, setSelectedLocation] = useState(INITIAL_LOCATION);
   const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
@@ -27,191 +33,36 @@ function App() {
   const [view, setView] = useState(null);
   const [hourlyChartData, setHourlyChartData] = useState(null);
   const [monthlyChartData, setMonthlyChartData] = useState(null);
-  const [dailyChartData, setDailyChartData] = useState([]); // Initialize as empty array
+  const [dailyChartData, setDailyChartData] = useState([]);
+  const [variableConfigApp, setVariableConfigApp] = useState(APP_CONFIG.variables[INITIAL_VARIABLE]);
 
   // Add ref for MapView component
   const mapViewRef = useRef(null);
 
-  // Function to get the correct unit label - replace with appConfig
-  const getUnitLabel = (variable) => {
-    return APP_CONFIG.variables[variable].units;
-  };
-
-  const yearRange = APP_CONFIG.general.yearSelectorRange;
-  // Extract UI theme colors from appConfig
+  // Extract UI theme colors
   const {
     backgroundPrimary,
     backgroundSecondary,
     accent,
     border,
     text
-  } = APP_CONFIG.general.ui.theme;
+  } = uiTheme;
 
-  // Extract UI text from appConfig
-  const UIText = APP_CONFIG.general.text;
+  // Add useEffect to update variableConfigApp when selectedVariable changes
+  useEffect(() => {
+    setVariableConfigApp(APP_CONFIG.variables[selectedVariable]);
+  }, [selectedVariable]);
+
+  // Function to get the correct unit label - update to use variableConfigApp
+  const getUnitLabel = () => {
+    return variableConfigApp.units;
+  };
 
   // Generate test data for each chart type
   const generateChartData = (type) => {
-    const unitLabel = getUnitLabel(selectedVariable);
+    const unitLabel = getUnitLabel();
     
     switch(type) {
-      case 'daily':
-        return {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          datasets: [{
-            label: `Daily ${selectedVariable} Values (${unitLabel})`,
-            data: Array(7).fill(0).map(() => Math.random() * 10),
-            borderColor: '#C77A41',
-            tension: 0.1
-          }]
-        };
-      case 'monthly':
-        return {
-          labels: [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-          ],
-          datasets: [{
-            label: `Monthly ${selectedVariable} Values (${unitLabel})`,
-            data: Array(12).fill(0).map(() => Math.random() * 10),
-            borderColor: '#C77A41',
-            tension: 0.1,
-            fill: false
-          }],
-          options: {
-            scales: {
-              x: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef'
-                }
-              },
-              y: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef'
-                }
-              }
-            },
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  color: '#efefef',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              }
-            }
-          }
-        };
-      case 'hourly':
-        // Generate dates for 3 days before and 3 days after selected date
-        const dates = Array(7).fill(0).map((_, index) => {
-          const date = new Date(selectedDate);
-          date.setDate(date.getDate() - 3 + index);
-          return date;
-        });
-
-        // Generate random data for each day (we'll replace this with real data later)
-        const hourlyData = dates.map(date => 
-          Array(24).fill(0).map(() => Math.random() * 10)
-        );
-
-        // Calculate moving average
-        const calculateMovingAverage = (hourIndex) => {
-          const halfRange = Math.floor(MOVING_AVERAGE_RANGE / 2);
-          let sum = 0;
-          let count = 0;
-
-          // For each day
-          for (let dayData of hourlyData) {
-            // Look at hours within the range
-            for (let h = hourIndex - halfRange; h <= hourIndex + halfRange; h++) {
-              // Handle wrapping around midnight
-              const wrappedHour = ((h % 24) + 24) % 24;
-              if (dayData[wrappedHour] !== null && !isNaN(dayData[wrappedHour])) {
-                sum += dayData[wrappedHour];
-                count++;
-              }
-            }
-          }
-          return count > 0 ? sum / count : null;
-        };
-
-        // Generate moving average data
-        const movingAverageData = Array(24).fill(0)
-          .map((_, hour) => calculateMovingAverage(hour));
-
-        return {
-          labels: Array(25).fill(0).map((_, i) => `${i.toString().padStart(2, '0')}:00`),
-          datasets: [
-            // Individual day datasets
-            ...dates.map((date, index) => ({
-              label: date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric'
-              }),
-              data: hourlyData[index],
-              borderColor: index === 3 ? '#C77A41' : '#666666',
-              borderWidth: index === 3 ? 2 : 1,
-              tension: 0.1,
-              fill: false
-            })),
-            // Moving average dataset
-            {
-              label: `${MOVING_AVERAGE_RANGE}hr Moving Average`,
-              data: movingAverageData,
-              borderColor: '#00ff00',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              tension: 0.3,
-              fill: false
-            }
-          ],
-          options: {
-            scales: {
-              x: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef',
-                  maxRotation: 0
-                },
-                min: '00:00',
-                max: '24:00',
-                padding: 10
-              },
-              y: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef'
-                }
-              }
-            },
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  color: '#efefef',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              }
-            }
-          }
-        };
       default:
         return null;
     }
@@ -266,7 +117,7 @@ function App() {
   // Create list of available years (from today back X years)
   const currentYear = new Date().getFullYear();
   // Use yearSelectorRange from appConfig instead of hardcoded 5
-  const years = Array.from({ length: yearRange + 1 }, (_, i) => currentYear - i);
+  const years = Array.from({ length: yearSelectorRange + 1 }, (_, i) => currentYear - i);
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
@@ -523,12 +374,12 @@ function App() {
             <div style={controlsContainerStyle}>
               {/* Date */}
               <div style={controlItemStyle}>
-                <span>{UIText.labels.date}: {dateDisplay}</span>
+                <span>{uiText.labels.date}: {dateDisplay}</span>
               </div>
 
               {/* Location */}
               <div style={controlItemStyle}>
-                <span>{UIText.labels.location}: {locationDisplay}</span>
+                <span>{uiText.labels.location}: {locationDisplay}</span>
               </div>
 
               {/* Year Selector */}
@@ -538,7 +389,7 @@ function App() {
                   onClick={() => handleYearChange(-1)}
                   disabled={selectedYear <= Math.min(...years)}
                 >
-                  ⏮
+                  {yearSelectorIcons.first}
                 </button>
                 <button 
                   style={yearButtonStyle}
@@ -576,9 +427,9 @@ function App() {
               {/* Value */}
               <div style={controlItemStyle}>
                 {pixelValue ? (
-                  <span>{UIText.labels.value}: {pixelValue.toFixed(APP_CONFIG.components.charts.common.valuePrecision)} {getUnitLabel(selectedVariable)}</span>
+                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
                 ) : (
-                  <span>{UIText.status.loadingInitialData}</span>
+                  <span>{uiText.status.loadingInitialData}</span>
                 )}
               </div>
             </div>
@@ -588,7 +439,7 @@ function App() {
               <DailyChart 
                 data={dailyChartData} 
                 selectedVariable={selectedVariable}
-                variableConfig={APP_CONFIG.variables[selectedVariable]}
+                variableConfig={variableConfigApp}
                 onDateSelect={handleDateSelect}
                 selectedYear={selectedYear}
               />
@@ -597,9 +448,9 @@ function App() {
             {/* Monthly Chart */}
             <div style={chartContainerStyle}>
               <MonthlyChart 
-                data={monthlyChartData || generateChartData('monthly')} 
+                data={monthlyChartData}
                 selectedVariable={selectedVariable}
-                variableConfig={APP_CONFIG.variables[selectedVariable]}
+                variableConfig={variableConfigApp}
               />
             </div>
           </div>
@@ -635,7 +486,7 @@ function App() {
                   border: '1px solid #C77A41',
                   zIndex: 2
                 }}>
-                  {UIText.labels.value} {pixelValue.toFixed(APP_CONFIG.components.charts.common.valuePrecision)} {getUnitLabel(selectedVariable)}
+                  {uiText.labels.value} {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {variableConfigApp.units}
                 </div>
               )}
             </div>
@@ -643,9 +494,9 @@ function App() {
             {/* Hourly Chart */}
             <div style={chartContainerStyle}>
               <HourlyChart 
-                data={hourlyChartData || generateChartData('hourly')} 
+                data={hourlyChartData}
                 selectedVariable={selectedVariable}
-                variableConfig={APP_CONFIG.variables[selectedVariable]}
+                variableConfig={variableConfigApp}
                 selectedDate={selectedDate}
               />
             </div>
