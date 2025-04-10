@@ -433,9 +433,18 @@ function App() {
                 )}
               </div>
             </div>
+                        {/* Hourly Chart */}
+            <div style={chartContainerStyle}>
+              <HourlyChart 
+                data={hourlyChartData}
+                selectedVariable={selectedVariable}
+                variableConfig={variableConfigApp}
+                selectedDate={selectedDate}
+              />
+            </div>
 
             {/* Daily Chart */}
-            <div style={chartContainerStyle}>
+            {/* <div style={chartContainerStyle}>
               <DailyChart 
                 data={dailyChartData} 
                 selectedVariable={selectedVariable}
@@ -443,16 +452,16 @@ function App() {
                 onDateSelect={handleDateSelect}
                 selectedYear={selectedYear}
               />
-            </div>
+            </div> */}
 
             {/* Monthly Chart */}
-            <div style={chartContainerStyle}>
+            {/* <div style={chartContainerStyle}>
               <MonthlyChart 
                 data={monthlyChartData}
                 selectedVariable={selectedVariable}
                 variableConfig={variableConfigApp}
               />
-            </div>
+            </div> */}
           </div>
 
           {/* Right Side Container */}
@@ -489,16 +498,6 @@ function App() {
                   {uiText.labels.value} {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {variableConfigApp.units}
                 </div>
               )}
-            </div>
-
-            {/* Hourly Chart */}
-            <div style={chartContainerStyle}>
-              <HourlyChart 
-                data={hourlyChartData}
-                selectedVariable={selectedVariable}
-                variableConfig={variableConfigApp}
-                selectedDate={selectedDate}
-              />
             </div>
           </div>
         </div>
