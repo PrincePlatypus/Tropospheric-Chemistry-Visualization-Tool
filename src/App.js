@@ -5,6 +5,8 @@ import DailyChart from './components/Charts/DailyChart';
 import MonthlyChart from './components/Charts/MonthlyChart';
 import HourlyChart from './components/Charts/HourlyChart';
 import { APP_CONFIG } from './config/appConfig';
+import DateSelector from './components/UI/DateSelector';
+import LocationInput from './components/UI/LocationInput';
 
 function App() {
   // APP_CONFIG variables
@@ -127,10 +129,31 @@ function App() {
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
+    setSelectedYear(date.getFullYear());
+    
+    // If you have a map reference and location, update the data
+    if (mapViewRef.current && selectedLocation) {
+      mapViewRef.current.updateLayerTimeExtent(date);
+      mapViewRef.current.fetchLocationData(selectedLocation, date, selectedVariable);
+      mapViewRef.current.fetchHourlyRangeData(selectedLocation, date, selectedVariable);
+      mapViewRef.current.fetchDailyData(selectedLocation, date.getFullYear(), selectedVariable);
+      mapViewRef.current.fetchMonthlyData(selectedLocation, date.getFullYear(), selectedVariable);
+    }
   };
 
   const handleLocationChange = (location) => {
+    console.log('🔷 APP: Location change handler called with', location);
     setSelectedLocation(location);
+    
+    // Fetch data when location changes
+    if (mapViewRef.current && selectedDate) {
+      console.log('🔷 APP: Fetching data for new location');
+      mapViewRef.current.updateLayerTimeExtent(selectedDate);
+      mapViewRef.current.fetchLocationData(location, selectedDate, selectedVariable);
+      mapViewRef.current.fetchHourlyRangeData(location, selectedDate, selectedVariable);
+      mapViewRef.current.fetchMonthlyData(location, selectedYear, selectedVariable);
+      mapViewRef.current.fetchDailyData(location, selectedYear, selectedVariable);
+    }
   };
 
   const handleVariableChange = (variable) => {
@@ -396,17 +419,22 @@ function App() {
           <div style={leftContainerStyle}>
             {/* Controls Container */}
             <div style={controlsContainerStyle}>
-              {/* Date */}
+              {/* Date
               <div style={controlItemStyle}>
                 <span>{uiText.labels.date}: {dateDisplay}</span>
-              </div>
+              </div> */}
 
-              {/* Location */}
+              {/* Value */}
               <div style={controlItemStyle}>
-                <span>{uiText.labels.location}: {locationDisplay}</span>
+                {pixelValue ? (
+                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
+                ) : (
+                  <span>{uiText.status.loadingInitialData}</span>
+                )}
               </div>
 
               {/* Year Selector */}
+              {/* Year Selector
               <div style={yearControlStyle}>
                 <button 
                   style={yearButtonStyle}
@@ -447,15 +475,28 @@ function App() {
                 >
                   ⏭
                 </button>
-              </div>
-              {/* Value */}
+              </div> */}
+
+
+
+              {/* Date Selector */}
               <div style={controlItemStyle}>
-                {pixelValue ? (
-                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
-                ) : (
-                  <span>{uiText.status.loadingInitialData}</span>
-                )}
+                {/* Hide the label by setting display: 'none' */}
+                <span style={{ display: 'none' }}>{uiText.labels.date}</span>
+                <DateSelector 
+                  selectedDate={selectedDate}
+                  onDateChange={handleDateChange}
+                />
               </div>
+
+              {/* Location Input */}
+              <div style={controlItemStyle}>
+                <LocationInput 
+                  selectedLocation={selectedLocation}
+                  onLocationChange={handleLocationChange}
+                />
+              </div>
+
             </div>
                         {/* Hourly Chart */}
             <div style={chartContainerStyle}>

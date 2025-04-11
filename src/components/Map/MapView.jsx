@@ -111,7 +111,7 @@ const MapView = forwardRef(({
           const convertedValue = selectedVariable === 'NO2' 
             ? value * 2.69e10  // Convert to ppb for NO2
             : value * 2.69e13; // Convert to ppt for HCHO
-          return convertedValue.toFixed(2);
+          return convertedValue;
         }
       }
       return null;
@@ -164,7 +164,7 @@ const MapView = forwardRef(({
               return infos.concat({
                 date: new Date(sample.attributes.StdTime),
                 rawValue: Number(rawValue),
-                value: convertedValue.toFixed(2)
+                value: convertedValue
               });
             }, []);
 
@@ -298,7 +298,7 @@ const MapView = forwardRef(({
             const lastTime = allTimes[allTimes.length - 1];
 
             // Round down for start hour, round up for end hour
-            const startHour = Math.max(0, Math.floor(parseInt(firstTime.split(':')[0])));
+            const startHour = Math.max(0, Math.floor(parseInt(firstTime.split(':')[0])))- 1;
             const lastTimeHour = parseInt(lastTime.split(':')[0]);
             // Use exact last hour without padding
             const endHour = Math.min(23, lastTimeHour);
@@ -613,7 +613,7 @@ const MapView = forwardRef(({
       
       // Store references to layer groups
       layersRef.current.hourlyGroup = webscene.allLayers.find(layer => 
-        layer.title === APP_CONFIG.webscene.layers.groups.hourly.title
+        layer.title === APP_CONFIG.components.map.layerGroupTitles.hourly
       );
       
       // More detailed logs of layer groups
@@ -635,7 +635,7 @@ const MapView = forwardRef(({
 
       // Keep monthly group hidden
       const monthlyGroup = webscene.allLayers.find(layer => 
-        layer.title === APP_CONFIG.webscene.layers.groups.monthly.title
+        layer.title === APP_CONFIG.components.map.layerGroupTitles.monthly
       );
       if (monthlyGroup) {
         monthlyGroup.visible = false;
@@ -860,15 +860,15 @@ const MapView = forwardRef(({
     }
 
     const hourlyGroup = websceneRef.current.allLayers.find(layer => 
-      layer.title === APP_CONFIG.webscene.layers.groups.hourly.title
+      layer.title === APP_CONFIG.components.map.layerGroupTitles.hourly
     );
     
     const monthlyGroup = websceneRef.current.allLayers.find(layer => 
-      layer.title === APP_CONFIG.webscene.layers.groups.monthly.title
+      layer.title === APP_CONFIG.components.map.layerGroupTitles.monthly
     );
     
     const dailyGroup = websceneRef.current.allLayers.find(layer => 
-      layer.title === APP_CONFIG.webscene.layers.groups.daily.title
+      layer.title === APP_CONFIG.components.map.layerGroupTitles.daily
     );
 
     // Store references
