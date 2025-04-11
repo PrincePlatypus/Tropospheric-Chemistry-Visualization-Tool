@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import { APP_CONFIG } from '../../config/appConfig';
 
 ChartJS.register(
   CategoryScale,
@@ -20,7 +21,32 @@ ChartJS.register(
   Legend
 );
 
-const MonthlyChart = ({ data, selectedVariable, variableConfig }) => {
+const MonthlyChart = ({ data: realData, selectedVariable, variableConfig }) => {
+  // Extract theme colors from APP_CONFIG
+  const { 
+    backgroundPrimary, 
+    accent, 
+    text, 
+    border 
+  } = APP_CONFIG.general.ui.theme;
+
+  // Generate fallback data if no real data is provided
+  const generateFallbackData = () => {
+    return {
+      labels: [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ],
+      datasets: [{
+        label: `Monthly ${selectedVariable} Values (${variableConfig.units})`,
+        data: Array(12).fill(0).map(() => Math.random() * 10),
+        borderColor: accent,
+        tension: 0.1,
+        fill: false
+      }]
+    };
+  };
+  
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -29,7 +55,7 @@ const MonthlyChart = ({ data, selectedVariable, variableConfig }) => {
         position: 'top',
         align: 'start',
         labels: {
-          color: '#efefef',
+          color: text,
           padding: 4,
           boxWidth: 12,
           boxHeight: 12,
@@ -40,8 +66,8 @@ const MonthlyChart = ({ data, selectedVariable, variableConfig }) => {
       },
       title: {
         display: true,
-        text: `Monthly ${selectedVariable} Values`,
-        color: '#efefef',
+        text: APP_CONFIG.components.charts.monthly.text.title.replace('${variable}', selectedVariable),
+        color: text,
         font: { size: 12 },
         padding: {
           top: 2,
@@ -49,8 +75,8 @@ const MonthlyChart = ({ data, selectedVariable, variableConfig }) => {
         }
       },
       tooltip: {
-        backgroundColor: '#1C243B',
-        borderColor: '#C77A41',
+        backgroundColor: backgroundPrimary,
+        borderColor: accent,
         borderWidth: 1,
         titleFont: { size: 11 },
         bodyFont: { size: 11 }
@@ -59,41 +85,36 @@ const MonthlyChart = ({ data, selectedVariable, variableConfig }) => {
     scales: {
       y: {
         grid: {
-          color: '#666666'
+          color: border
         },
         ticks: {
-          color: '#efefef',
+          color: text,
           padding: 2,
           font: { size: 10 }
         },
         title: {
           display: true,
-          text: variableConfig?.units || 'Value',
-          color: '#efefef',
+          text: variableConfig?.units || APP_CONFIG.components.charts.common.fallbackYAxisTitle,
+          color: text,
           font: { size: 10 },
           padding: { top: 0, bottom: 0 }
         }
       },
       x: {
         grid: {
-          color: '#666666'
+          color: border
         },
         ticks: {
-          color: '#efefef',
+          color: text,
           padding: 2,
           font: { size: 10 }
         }
       }
-    },
-    layout: {
-      padding: {
-        top: 2,
-        right: 2,
-        bottom: 2,
-        left: 2
-      }
     }
   };
+
+  // Use real data if available, otherwise use fallback data
+  const chartData = realData || generateFallbackData();
 
   return (
     <div style={{ 
@@ -102,7 +123,7 @@ const MonthlyChart = ({ data, selectedVariable, variableConfig }) => {
       height: '100%',
       overflow: 'hidden'
     }}>
-      <Line data={data} options={options} />
+      <Line data={chartData} options={options} />
     </div>
   );
 };

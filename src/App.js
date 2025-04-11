@@ -4,16 +4,25 @@ import MapView from './components/Map/MapView';
 import DailyChart from './components/Charts/DailyChart';
 import MonthlyChart from './components/Charts/MonthlyChart';
 import HourlyChart from './components/Charts/HourlyChart';
-import { VARIABLES } from './config/variables';
+import { APP_CONFIG } from './config/appConfig';
 
 function App() {
-  // Initial configuration
-  const INITIAL_DATE = new Date(2024, 8, 21); // September 21, 2024
+  // APP_CONFIG variables
+  const defaultState = APP_CONFIG.general.defaultState;
+  const yearSelectorRange = APP_CONFIG.general.yearSelectorRange;
+  const uiTheme = APP_CONFIG.general.ui.theme;
+  const uiText = APP_CONFIG.general.text;
+  const chartsConfig = APP_CONFIG.components.charts;
+  const yearSelectorIcons = APP_CONFIG.general.ui.icons.yearSelector;
+
+  // Initial configuration from appConfig
+  const INITIAL_DATE = defaultState.date;
   const INITIAL_LOCATION = {
-    latitude: 40.7128,  // New York City coordinates as example
-    longitude: -74.0060
+    latitude: defaultState.view.center[1],
+    longitude: defaultState.view.center[0]
   };
-  const INITIAL_VARIABLE = 'NO2';
+  const INITIAL_VARIABLE = defaultState.variable;
+  const MOVING_AVERAGE_RANGE = chartsConfig.hourly.movingAverageHoursRange;
 
   // State with initial values
   const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
@@ -22,192 +31,55 @@ function App() {
   const [selectedYear, setSelectedYear] = useState(INITIAL_DATE.getFullYear());
   const [pixelValue, setPixelValue] = useState(null);
   const [view, setView] = useState(null);
-  const MOVING_AVERAGE_RANGE = 4; // 4 hours total range (±2 hours)
   const [hourlyChartData, setHourlyChartData] = useState(null);
   const [monthlyChartData, setMonthlyChartData] = useState(null);
-  const [dailyChartData, setDailyChartData] = useState([]); // Initialize as empty array
+  const [dailyChartData, setDailyChartData] = useState([]);
+  const [variableConfigApp, setVariableConfigApp] = useState(APP_CONFIG.variables[INITIAL_VARIABLE]);
 
   // Add ref for MapView component
   const mapViewRef = useRef(null);
 
-  // Function to get the correct unit label
-  const getUnitLabel = (variable) => {
-    return variable === 'NO2' ? 'ppb' : 'ppt';
+  // Extract UI theme colors
+  const {
+    backgroundPrimary,
+    backgroundSecondary,
+    accent,
+    border,
+    text
+  } = uiTheme;
+
+  // Add useEffect to update variableConfigApp when selectedVariable changes
+  useEffect(() => {
+    setVariableConfigApp(APP_CONFIG.variables[selectedVariable]);
+  }, [selectedVariable]);
+
+  // Function to get the correct unit label - update to use variableConfigApp
+  const getUnitLabel = () => {
+    return variableConfigApp.units;
   };
 
   // Generate test data for each chart type
   const generateChartData = (type) => {
-    const unitLabel = getUnitLabel(selectedVariable);
+    const unitLabel = getUnitLabel();
     
     switch(type) {
-      case 'daily':
-        return {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          datasets: [{
-            label: `Daily ${selectedVariable} Values (${unitLabel})`,
-            data: Array(7).fill(0).map(() => Math.random() * 10),
-            borderColor: '#C77A41',
-            tension: 0.1
-          }]
-        };
-      case 'monthly':
-        return {
-          labels: [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-          ],
-          datasets: [{
-            label: `Monthly ${selectedVariable} Values (${unitLabel})`,
-            data: Array(12).fill(0).map(() => Math.random() * 10),
-            borderColor: '#C77A41',
-            tension: 0.1,
-            fill: false
-          }],
-          options: {
-            scales: {
-              x: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef'
-                }
-              },
-              y: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef'
-                }
-              }
-            },
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  color: '#efefef',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              }
-            }
-          }
-        };
-      case 'hourly':
-        // Generate dates for 3 days before and 3 days after selected date
-        const dates = Array(7).fill(0).map((_, index) => {
-          const date = new Date(selectedDate);
-          date.setDate(date.getDate() - 3 + index);
-          return date;
-        });
-
-        // Generate random data for each day (we'll replace this with real data later)
-        const hourlyData = dates.map(date => 
-          Array(24).fill(0).map(() => Math.random() * 10)
-        );
-
-        // Calculate moving average
-        const calculateMovingAverage = (hourIndex) => {
-          const halfRange = Math.floor(MOVING_AVERAGE_RANGE / 2);
-          let sum = 0;
-          let count = 0;
-
-          // For each day
-          for (let dayData of hourlyData) {
-            // Look at hours within the range
-            for (let h = hourIndex - halfRange; h <= hourIndex + halfRange; h++) {
-              // Handle wrapping around midnight
-              const wrappedHour = ((h % 24) + 24) % 24;
-              if (dayData[wrappedHour] !== null && !isNaN(dayData[wrappedHour])) {
-                sum += dayData[wrappedHour];
-                count++;
-              }
-            }
-          }
-          return count > 0 ? sum / count : null;
-        };
-
-        // Generate moving average data
-        const movingAverageData = Array(24).fill(0)
-          .map((_, hour) => calculateMovingAverage(hour));
-
-        return {
-          labels: Array(25).fill(0).map((_, i) => `${i.toString().padStart(2, '0')}:00`),
-          datasets: [
-            // Individual day datasets
-            ...dates.map((date, index) => ({
-              label: date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric'
-              }),
-              data: hourlyData[index],
-              borderColor: index === 3 ? '#C77A41' : '#666666',
-              borderWidth: index === 3 ? 2 : 1,
-              tension: 0.1,
-              fill: false
-            })),
-            // Moving average dataset
-            {
-              label: `${MOVING_AVERAGE_RANGE}hr Moving Average`,
-              data: movingAverageData,
-              borderColor: '#00ff00',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              tension: 0.3,
-              fill: false
-            }
-          ],
-          options: {
-            scales: {
-              x: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef',
-                  maxRotation: 0
-                },
-                min: '00:00',
-                max: '24:00',
-                padding: 10
-              },
-              y: {
-                grid: {
-                  color: '#666666',
-                  borderColor: '#666666'
-                },
-                ticks: {
-                  color: '#efefef'
-                }
-              }
-            },
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  color: '#efefef',
-                  usePointStyle: true,
-                  padding: 20
-                }
-              }
-            }
-          }
-        };
       default:
         return null;
     }
   };
+
+  // Define grid proportions as variables
+  const leftColumnWidth = 45;
+  const rightColumnWidth = 55;
 
   const mainContainerStyle = {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
     width: '100vw',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    minWidth: '800px',
+    minHeight: '600px'
   };
 
   const headerContainerStyle = {
@@ -248,16 +120,32 @@ function App() {
     cursor: 'pointer'
   };
 
-  // Generate year options
-  const years = Array.from(
-    { length: 5 }, 
-    (_, i) => new Date().getFullYear() - i
-  );
+  // Create list of available years (from today back X years)
+  const currentYear = new Date().getFullYear();
+  // Use yearSelectorRange from appConfig instead of hardcoded 5
+  const years = Array.from({ length: yearSelectorRange + 1 }, (_, i) => currentYear - i);
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+  };
+
+  const handleLocationChange = (location) => {
+    setSelectedLocation(location);
+  };
+
+  const handleVariableChange = (variable) => {
+    setSelectedVariable(variable);
+  };
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+  };
+
 
   const contentContainerStyle = {
     flex: '1 1 auto',
     display: 'grid',
-    gridTemplateColumns: '45fr 55fr',
+    gridTemplateColumns: `${leftColumnWidth}fr ${rightColumnWidth}fr`,
     gap: '4px',
     padding: '4px',
     backgroundColor: '#1C243B',
@@ -267,7 +155,7 @@ function App() {
 
   const leftContainerStyle = {
     display: 'grid',
-    gridTemplateRows: '10fr 50fr 40fr',
+    gridTemplateRows: '10fr 90fr',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
@@ -275,12 +163,14 @@ function App() {
   };
 
   const rightContainerStyle = {
-    display: 'grid',
-    gridTemplateRows: '60fr 40fr',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
-    backgroundColor: '#1C243B'
+    backgroundColor: '#1C243B',
+    position: 'relative'
   };
 
   const controlsContainerStyle = {
@@ -307,9 +197,25 @@ function App() {
   };
 
   const mapContainerStyle = {
-    ...chartContainerStyle,
-    padding: 0,
-    position: 'relative'
+    flex: 1,
+    backgroundColor: '#1C243B',
+    padding: '4px',
+    borderRadius: '2px',
+    position: 'relative',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  };
+
+  // Update the mapGhostContainerStyle to be more dynamic
+  const mapGhostContainerStyle = {
+    position: 'absolute',
+    height: '100%',
+    width: `${(100 * (leftColumnWidth + rightColumnWidth) / rightColumnWidth)}%`,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    overflow: 'hidden'
   };
 
   const titleStyle = {
@@ -382,10 +288,6 @@ function App() {
     textAlign: 'center',
     cursor: 'pointer',
     border: 'none'
-  };
-
-  const handleYearChange = (increment) => {
-    setSelectedYear(prev => prev + increment);
   };
 
   const getOrdinalSuffix = (day) => {
@@ -466,7 +368,7 @@ function App() {
     : 'No date selected';
 
   return (
-    <CalciteShell>
+    <CalciteShell style={{ width: '100vw', height: '100vh', backgroundColor: backgroundPrimary }}>
       <div style={mainContainerStyle}>
         {/* Header Container - Now only contains the title bar */}
         <div style={headerContainerStyle}>
@@ -474,18 +376,15 @@ function App() {
           <div style={titleBarStyle}>
             <div style={titleStyle}>NO2 and HCHO</div>
             <div style={buttonGroupStyle}>
-              <button 
-                style={buttonStyle(selectedVariable === 'NO2')}
-                onClick={() => setSelectedVariable('NO2')}
-              >
-                NO2
-              </button>
-              <button 
-                style={buttonStyle(selectedVariable === 'HCHO')}
-                onClick={() => setSelectedVariable('HCHO')}
-              >
-                HCHO
-              </button>
+              {Object.keys(APP_CONFIG.variables).map(variable => (
+                <button
+                  key={variable}
+                  style={buttonStyle(selectedVariable === variable)}
+                  onClick={() => handleVariableChange(variable)}
+                >
+                  {APP_CONFIG.variables[variable].displayName}
+                </button>
+              ))}
             </div>
             <button style={howToButtonStyle}>How to</button>
           </div>
@@ -499,12 +398,12 @@ function App() {
             <div style={controlsContainerStyle}>
               {/* Date */}
               <div style={controlItemStyle}>
-                <span>Date: {dateDisplay}</span>
+                <span>{uiText.labels.date}: {dateDisplay}</span>
               </div>
 
               {/* Location */}
               <div style={controlItemStyle}>
-                <span>Location: {locationDisplay}</span>
+                <span>{uiText.labels.location}: {locationDisplay}</span>
               </div>
 
               {/* Year Selector */}
@@ -514,7 +413,7 @@ function App() {
                   onClick={() => handleYearChange(-1)}
                   disabled={selectedYear <= Math.min(...years)}
                 >
-                  ⏮
+                  {yearSelectorIcons.first}
                 </button>
                 <button 
                   style={yearButtonStyle}
@@ -552,78 +451,79 @@ function App() {
               {/* Value */}
               <div style={controlItemStyle}>
                 {pixelValue ? (
-                  <span>Value: {pixelValue} {getUnitLabel(selectedVariable)}</span>
+                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
                 ) : (
-                  <span>Loading initial data...</span>
+                  <span>{uiText.status.loadingInitialData}</span>
                 )}
               </div>
             </div>
+                        {/* Hourly Chart */}
+            <div style={chartContainerStyle}>
+              <HourlyChart 
+                data={hourlyChartData}
+                selectedVariable={selectedVariable}
+                variableConfig={variableConfigApp}
+                selectedDate={selectedDate}
+              />
+            </div>
 
             {/* Daily Chart */}
-            <div style={chartContainerStyle}>
+            {/* <div style={chartContainerStyle}>
               <DailyChart 
                 data={dailyChartData} 
                 selectedVariable={selectedVariable}
-                variableConfig={VARIABLES[selectedVariable]}
+                variableConfig={variableConfigApp}
                 onDateSelect={handleDateSelect}
                 selectedYear={selectedYear}
               />
-            </div>
+            </div> */}
 
             {/* Monthly Chart */}
-            <div style={chartContainerStyle}>
+            {/* <div style={chartContainerStyle}>
               <MonthlyChart 
-                data={monthlyChartData || generateChartData('monthly')} 
+                data={monthlyChartData}
                 selectedVariable={selectedVariable}
-                variableConfig={VARIABLES[selectedVariable]}
+                variableConfig={variableConfigApp}
               />
-            </div>
+            </div> */}
           </div>
 
           {/* Right Side Container */}
           <div style={rightContainerStyle}>
             {/* Map */}
             <div style={mapContainerStyle}>
-              <MapView 
-                ref={mapViewRef}
-                onLocationSelect={setSelectedLocation}
-                selectedVariable={selectedVariable}
-                onViewCreated={setView}
-                onPixelValueChange={setPixelValue}
-                selectedDate={selectedDate}
-                selectedYear={selectedYear}
-                initialLocation={INITIAL_LOCATION}
-                initialDate={INITIAL_DATE}
-                onHourlyDataUpdate={handleHourlyDataUpdate}
-                onMonthlyDataUpdate={handleMonthlyDataUpdate}
-                onDailyDataUpdate={handleDailyDataUpdate}
-              />
-              {/* Pixel Value Popup */}
-              {pixelValue && (
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  backgroundColor: 'rgba(28, 36, 59, 0.9)',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  color: '#efefef',
-                  border: '1px solid #C77A41',
-                  zIndex: 2
-                }}>
-                  Value: {pixelValue} {getUnitLabel(selectedVariable)}
+                <div style={mapGhostContainerStyle}>
+                    <MapView 
+                        ref={mapViewRef}
+                        onLocationSelect={setSelectedLocation}
+                        selectedVariable={selectedVariable}
+                        onViewCreated={setView}
+                        onPixelValueChange={setPixelValue}
+                        selectedDate={selectedDate}
+                        selectedYear={selectedYear}
+                        initialLocation={INITIAL_LOCATION}
+                        initialDate={INITIAL_DATE}
+                        onHourlyDataUpdate={handleHourlyDataUpdate}
+                        onMonthlyDataUpdate={handleMonthlyDataUpdate}
+                        onDailyDataUpdate={handleDailyDataUpdate}
+                    />
                 </div>
-              )}
-            </div>
-
-            {/* Hourly Chart */}
-            <div style={chartContainerStyle}>
-              <HourlyChart 
-                data={hourlyChartData || generateChartData('hourly')} 
-                selectedVariable={selectedVariable}
-                variableConfig={VARIABLES[selectedVariable]}
-                selectedDate={selectedDate}
-              />
+                {/* Pixel Value Popup */}
+                {pixelValue && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        backgroundColor: 'rgba(28, 36, 59, 0.9)',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        color: '#efefef',
+                        border: '1px solid #C77A41',
+                        zIndex: 2
+                    }}>
+                        {uiText.labels.value} {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {variableConfigApp.units}
+                    </div>
+                )}
             </div>
           </div>
         </div>

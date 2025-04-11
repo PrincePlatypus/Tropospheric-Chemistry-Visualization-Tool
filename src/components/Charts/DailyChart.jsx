@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
+import { APP_CONFIG } from '../../config/appConfig';
 
 const DailyChart = ({ data, selectedVariable, variableConfig, onDateSelect, selectedYear }) => {
-  const PADDING_RIGHT = 20;
-  const DAY_LABEL_WIDTH = 20;
+  const PADDING_RIGHT = APP_CONFIG.components.charts.daily.paddingRightPx;
+  const DAY_LABEL_WIDTH = APP_CONFIG.components.charts.daily.dayLabelWidthPx;
 
   const gridContainerStyle = {
     display: 'flex',
@@ -72,12 +73,12 @@ const DailyChart = ({ data, selectedVariable, variableConfig, onDateSelect, sele
     borderRadius: '1px'
   });
 
-  const days = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  const days = APP_CONFIG.components.charts.daily.dayAbbreviations;
 
   // Define color scale constants
-  const COLOR_START = [189, 175, 129, 255]; // light beige
-  const COLOR_END = [37, 11, 47, 255]; // dark purple
-  const VALUE_MAX = 300; // maximum value for scaling
+  const COLOR_START = variableConfig?.chartSettings?.dailyColorStart || [189, 175, 129, 255]; // light beige
+  const COLOR_END = variableConfig?.chartSettings?.dailyColorEnd || [37, 11, 47, 255]; // dark purple
+  const VALUE_MAX = APP_CONFIG.components.charts.daily.valueMax; // maximum value for scaling
 
   // Non-linear color mapping function
   const getCellColor = (value) => {
@@ -102,7 +103,7 @@ const DailyChart = ({ data, selectedVariable, variableConfig, onDateSelect, sele
   // Function to determine if week number should be shown
   const shouldShowWeek = (week) => {
     // Show week numbers at regular intervals
-    return week % 5 === 0;
+    return week % APP_CONFIG.components.charts.daily.weekLabelInterval === 0;
   };
 
   // Create a map of dates to values with proper type checking
@@ -143,41 +144,32 @@ const DailyChart = ({ data, selectedVariable, variableConfig, onDateSelect, sele
     }
 
     const dateStr = date.toISOString().split('T')[0];
-    return dateValueMap.get(dateStr);
+    return dateValueMap.has(dateStr) ? dateValueMap.get(dateStr) : null;
   };
 
-  // Function to get date string for tooltip
+  // Function to get date string for a specific cell
   const getDateString = (week, dayIndex) => {
     const date = new Date(selectedYear, 0, 1);
     const dayNumber = week * 7 + dayIndex - weekOffset;
     date.setDate(date.getDate() + dayNumber);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric' 
-    });
+    return date.toLocaleDateString();
   };
 
-  // Update cell click handler to properly pass the date
+  // Function to handle cell click
   const handleCellClick = (week, dayIndex) => {
     const date = new Date(selectedYear, 0, 1);
     const dayNumber = week * 7 + dayIndex - weekOffset;
     date.setDate(date.getDate() + dayNumber);
     
-    if (date.getFullYear() === selectedYear) {
-      console.log('🔶 DAILY CHART: Box clicked for date', date.toISOString());
+    if (onDateSelect && date.getFullYear() === selectedYear) {
       onDateSelect(date);
     }
   };
 
-  // Calculate number of weeks needed
-  const totalDays = getDaysInYear(selectedYear);
-  const totalWeeks = Math.ceil((totalDays + weekOffset) / 7);
-
   return (
     <div style={gridContainerStyle}>
       <div style={headerStyle}>
-        Daily {selectedVariable} Values
+        {APP_CONFIG.components.charts.daily.text.title.replace('${variable}', selectedVariable)}
       </div>
       <div style={gridStyle}>
         {/* Week labels */}
@@ -224,8 +216,8 @@ const DailyChart = ({ data, selectedVariable, variableConfig, onDateSelect, sele
                     }}
                     onClick={() => isValidDate && handleCellClick(week, dayIndex)}
                     title={isValidDate ? 
-                      `${dateStr}: ${value?.toFixed(2)} ${variableConfig?.units || ''}` : 
-                      'No data available'
+                      `${dateStr}: ${value?.toFixed(APP_CONFIG.components.charts.common.valuePrecision)} ${variableConfig?.units || ''}` : 
+                      APP_CONFIG.components.charts.daily.text.tooltips.noData
                     }
                   />
                 );
