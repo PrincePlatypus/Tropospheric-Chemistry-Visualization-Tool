@@ -5,6 +5,7 @@ import DailyChart from './components/Charts/DailyChart';
 import MonthlyChart from './components/Charts/MonthlyChart';
 import HourlyChart from './components/Charts/HourlyChart';
 import { APP_CONFIG } from './config/appConfig';
+import DateSelector from './components/DateSelector/DateSelector';
 
 function App() {
   // APP_CONFIG variables
@@ -127,6 +128,16 @@ function App() {
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
+    setSelectedYear(date.getFullYear());
+    
+    // If you have a map reference and location, update the data
+    if (mapViewRef.current && selectedLocation) {
+      mapViewRef.current.updateLayerTimeExtent(date);
+      mapViewRef.current.fetchLocationData(selectedLocation, date, selectedVariable);
+      mapViewRef.current.fetchHourlyRangeData(selectedLocation, date, selectedVariable);
+      mapViewRef.current.fetchDailyData(selectedLocation, date.getFullYear(), selectedVariable);
+      mapViewRef.current.fetchMonthlyData(selectedLocation, date.getFullYear(), selectedVariable);
+    }
   };
 
   const handleLocationChange = (location) => {
@@ -396,17 +407,17 @@ function App() {
           <div style={leftContainerStyle}>
             {/* Controls Container */}
             <div style={controlsContainerStyle}>
-              {/* Date */}
+              {/* Date
               <div style={controlItemStyle}>
                 <span>{uiText.labels.date}: {dateDisplay}</span>
-              </div>
+              </div> */}
 
               {/* Location */}
               <div style={controlItemStyle}>
                 <span>{uiText.labels.location}: {locationDisplay}</span>
               </div>
 
-              {/* Year Selector */}
+              {/* Year Selector
               <div style={yearControlStyle}>
                 <button 
                   style={yearButtonStyle}
@@ -447,7 +458,7 @@ function App() {
                 >
                   ⏭
                 </button>
-              </div>
+              </div> */}
               {/* Value */}
               <div style={controlItemStyle}>
                 {pixelValue ? (
@@ -455,6 +466,15 @@ function App() {
                 ) : (
                   <span>{uiText.status.loadingInitialData}</span>
                 )}
+              </div>
+
+              {/* Date Selector */}
+              <div style={controlItemStyle}>
+                <span>{uiText.labels.date}</span>
+                <DateSelector 
+                  selectedDate={selectedDate}
+                  onDateChange={handleDateChange}
+                />
               </div>
             </div>
                         {/* Hourly Chart */}
