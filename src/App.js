@@ -77,7 +77,9 @@ function App() {
     flexDirection: 'column',
     height: '100vh',
     width: '100vw',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    minWidth: '800px',
+    minHeight: '600px'
   };
 
   const headerContainerStyle = {
