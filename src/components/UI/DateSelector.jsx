@@ -127,7 +127,7 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
         timeIntervals={15}  // Show 15-minute intervals
         timeCaption="Time"
         showMonthDropdown
-        showYearDropdown
+        showYearDropdown={false} // Hide year dropdown
         dropdownMode="select"
         todayButton="Today"
         maxDate={new Date()} // Prevent selecting future dates

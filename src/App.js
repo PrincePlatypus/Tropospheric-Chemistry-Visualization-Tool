@@ -5,7 +5,8 @@ import DailyChart from './components/Charts/DailyChart';
 import MonthlyChart from './components/Charts/MonthlyChart';
 import HourlyChart from './components/Charts/HourlyChart';
 import { APP_CONFIG } from './config/appConfig';
-import DateSelector from './components/DateSelector/DateSelector';
+import DateSelector from './components/UI/DateSelector';
+import LocationInput from './components/UI/LocationInput';
 
 function App() {
   // APP_CONFIG variables
@@ -141,7 +142,18 @@ function App() {
   };
 
   const handleLocationChange = (location) => {
+    console.log('🔷 APP: Location change handler called with', location);
     setSelectedLocation(location);
+    
+    // Fetch data when location changes
+    if (mapViewRef.current && selectedDate) {
+      console.log('🔷 APP: Fetching data for new location');
+      mapViewRef.current.updateLayerTimeExtent(selectedDate);
+      mapViewRef.current.fetchLocationData(location, selectedDate, selectedVariable);
+      mapViewRef.current.fetchHourlyRangeData(location, selectedDate, selectedVariable);
+      mapViewRef.current.fetchMonthlyData(location, selectedYear, selectedVariable);
+      mapViewRef.current.fetchDailyData(location, selectedYear, selectedVariable);
+    }
   };
 
   const handleVariableChange = (variable) => {
@@ -412,10 +424,15 @@ function App() {
                 <span>{uiText.labels.date}: {dateDisplay}</span>
               </div> */}
 
-              {/* Location */}
+              {/* Value */}
               <div style={controlItemStyle}>
-                <span>{uiText.labels.location}: {locationDisplay}</span>
+                {pixelValue ? (
+                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
+                ) : (
+                  <span>{uiText.status.loadingInitialData}</span>
+                )}
               </div>
+
 
               {/* Year Selector
               <div style={yearControlStyle}>
@@ -459,23 +476,27 @@ function App() {
                   ⏭
                 </button>
               </div> */}
-              {/* Value */}
-              <div style={controlItemStyle}>
-                {pixelValue ? (
-                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
-                ) : (
-                  <span>{uiText.status.loadingInitialData}</span>
-                )}
-              </div>
+
+
 
               {/* Date Selector */}
               <div style={controlItemStyle}>
-                <span>{uiText.labels.date}</span>
+                {/* Hide the label by setting display: 'none' */}
+                <span style={{ display: 'none' }}>{uiText.labels.date}</span>
                 <DateSelector 
                   selectedDate={selectedDate}
                   onDateChange={handleDateChange}
                 />
               </div>
+
+              {/* Location Input */}
+              <div style={controlItemStyle}>
+                <LocationInput 
+                  selectedLocation={selectedLocation}
+                  onLocationChange={handleLocationChange}
+                />
+              </div>
+
             </div>
                         {/* Hourly Chart */}
             <div style={chartContainerStyle}>
