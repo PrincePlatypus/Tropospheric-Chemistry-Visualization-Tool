@@ -433,7 +433,7 @@ function App() {
                 )}
               </div>
 
-
+              {/* Year Selector */}
               {/* Year Selector
               <div style={yearControlStyle}>
                 <button 
