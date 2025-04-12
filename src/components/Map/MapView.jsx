@@ -854,6 +854,7 @@ const MapView = forwardRef(({
   };
 
   // Also ensure the layer initialization is working
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!websceneRef.current) {
       return;
