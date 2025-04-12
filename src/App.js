@@ -464,7 +464,7 @@ function App() {
                 <button 
                   style={yearButtonStyle}
                   onClick={() => handleYearChange(1)}
-                  disabled={selectedYear >= Math.max(...years)}
+                  disabled={selectedYear >= Math.max(...years)} h
                 >
                   ▶
                 </button>
