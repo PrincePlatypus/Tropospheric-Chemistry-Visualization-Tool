@@ -7,6 +7,7 @@ import HourlyChart from './components/Charts/HourlyChart';
 import { APP_CONFIG } from './config/appConfig';
 import DateSelector from './components/UI/DateSelector';
 import LocationInput from './components/UI/LocationInput';
+import { useDataFetching } from './hooks/useDataFetching';
 
 function App() {
   // APP_CONFIG variables
@@ -127,6 +128,8 @@ function App() {
   // Use yearSelectorRange from appConfig instead of hardcoded 5
   const years = Array.from({ length: yearSelectorRange + 1 }, (_, i) => currentYear - i);
 
+  const fetchData = useDataFetching(mapViewRef);
+
   const handleDateChange = (date) => {
     setSelectedDate(date);
     setSelectedYear(date.getFullYear());
@@ -158,6 +161,11 @@ function App() {
 
   const handleVariableChange = (variable) => {
     setSelectedVariable(variable);
+    
+    // Use the centralized data fetching hook
+    if (selectedLocation && selectedDate) {
+      fetchData(selectedLocation, selectedDate, variable, selectedYear);
+    }
   };
 
   const handleYearChange = (year) => {
@@ -335,15 +343,8 @@ function App() {
     console.log('🔷 APP: Date selection handler called with', date.toISOString());
     setSelectedDate(date);
 
-    if (selectedLocation && mapViewRef.current) {
-      console.log('🔷 APP: Calling updateLayerTimeExtent for date', date.toISOString());
-      mapViewRef.current.updateLayerTimeExtent(date);
-      
-      console.log('🔷 APP: Calling data fetch methods for location', selectedLocation);
-      mapViewRef.current.fetchLocationData(selectedLocation, date, selectedVariable);
-      mapViewRef.current.fetchHourlyRangeData(selectedLocation, date, selectedVariable);
-      mapViewRef.current.fetchMonthlyData(selectedLocation, selectedYear, selectedVariable);
-      mapViewRef.current.fetchDailyData(selectedLocation, selectedYear, selectedVariable);
+    if (selectedLocation) {
+      fetchData(selectedLocation, date, selectedVariable, selectedYear);
     }
   };
 
@@ -389,6 +390,27 @@ function App() {
   const dateDisplay = selectedDate
     ? formatDate(selectedDate)
     : 'No date selected';
+
+  // Add this near your other useEffect hooks in App.js
+  useEffect(() => {
+    // Get default values from config
+    const defaultLocation = {
+      latitude: defaultState.view.center[1],
+      longitude: defaultState.view.center[0]
+    };
+    const defaultDate = defaultState.date;
+    const defaultVariable = defaultState.variable;
+    const defaultYear = defaultState.date.getFullYear();
+
+    // Wait 6 seconds then fetch initial data
+    const timer = setTimeout(() => {
+      console.log('🔷 APP: Fetching initial data after 6s delay');
+      fetchData(defaultLocation, defaultDate, defaultVariable, defaultYear);
+    }, 6000);
+
+    // Cleanup timer if component unmounts
+    return () => clearTimeout(timer);
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <CalciteShell style={{ width: '100vw', height: '100vh', backgroundColor: backgroundPrimary }}>
