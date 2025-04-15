@@ -65,7 +65,7 @@ export const APP_CONFIG = {
       labels: {
         date: "Date:", // src/App.js:L371
         location: "Location:", // src/App.js:L376
-        value: "Value:", // src/App.js:L400, L460
+        value: "Value", // src/App.js:L400, L460
       },
       status: {
         loadingInitialData: "Loading initial data...", // src/App.js:L402
@@ -101,11 +101,11 @@ export const APP_CONFIG = {
     NO2: {
       displayName: "NO2", // Used for UI elements like buttons and chart titles
       attributeName: 'NO2_Troposphere', // Name used in service attributes - src/config/variables.js:L3 | src/components/Map/MapView.jsx:L123, L181, L441
-      units: 'ppb', // Units for display - src/config/variables.js:L7 | src/App.js:L28
+      units: 'trillion molecules/cm^2', // Units for display - src/config/variables.js:L7 | src/App.js:L28
       // Function to process raw value from service (if needed, seems unused currently) - src/config/variables.js:L8
       postProcess: (value) => value / 1000000000000,
       // Conversion factor used in MapView.jsx getSamples - src/components/Map/MapView.jsx:L127, L185, L448
-      conversionFactor: 1e-14,
+      conversionFactor: 1,
       // Layer titles specific to this variable
       layers: {
         hourly: "NO2 Hourly", // src/config/appConfig.js:L20 | src/config/variables.js:L4, L5 | src/components/Map/MapView.jsx:L111, L604, L626
@@ -130,11 +130,11 @@ export const APP_CONFIG = {
     HCHO: {
       displayName: "HCHO", // Used for UI elements like buttons and chart titles
       attributeName: 'HCHO', // Name used in service attributes - src/config/variables.js:L12 | src/components/Map/MapView.jsx:L123, L181, L388, L441 | src/components/Map/MapView.jsx:L699
-      units: 'ppt', // Units for display - src/config/variables.js:L16 | src/App.js:L28
+      units: 'trillion molecules/cm^2', // Units for display - src/config/variables.js:L16 | src/App.js:L28
       // Function to process raw value from service (if needed, seems unused currently) - src/config/variables.js:L17
       postProcess: (value) => value / 1000000000,
       // Conversion factor used in MapView.jsx getSamples - src/components/Map/MapView.jsx:L128, L186, L394, L448 | src/components/Map/MapView.jsx:L709
-      conversionFactor: 1e-17,
+      conversionFactor: 1,
       // Layer titles specific to this variable
       layers: {
         hourly: "HCHO Hourly", // src/config/appConfig.js:L31 | src/config/variables.js:L13, L14 | src/components/Map/MapView.jsx:L111, L604, L626

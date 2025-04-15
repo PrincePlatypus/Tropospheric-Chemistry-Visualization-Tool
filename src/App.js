@@ -156,6 +156,7 @@ function App() {
       mapViewRef.current.fetchHourlyRangeData(location, selectedDate, selectedVariable);
       mapViewRef.current.fetchMonthlyData(location, selectedYear, selectedVariable);
       mapViewRef.current.fetchDailyData(location, selectedYear, selectedVariable);
+      mapViewRef.current.centerMapOnLocation(location);
     }
   };
 
@@ -405,12 +406,19 @@ function App() {
     // Wait 6 seconds then fetch initial data
     const timer = setTimeout(() => {
       console.log('🔷 APP: Fetching initial data after 6s delay');
+      
+      // Center map on default location
+      if (mapViewRef.current) {
+        mapViewRef.current.centerMapOnLocation(defaultLocation);
+      }
+      
+      // Fetch initial data
       fetchData(defaultLocation, defaultDate, defaultVariable, defaultYear);
     }, 6000);
 
     // Cleanup timer if component unmounts
     return () => clearTimeout(timer);
-  }, []); // Empty dependency array means this runs once on mount
+  }, [fetchData]); // Include fetchData in dependency array
 
   return (
     <CalciteShell style={{ width: '100vw', height: '100vh', backgroundColor: backgroundPrimary }}>

@@ -158,8 +158,8 @@ const MapView = forwardRef(({
               const scientificValue = Number(rawValue).toExponential();
               
               const convertedValue = variable === 'NO2'
-                ? Number(scientificValue) * 1e-14
-                : Number(scientificValue) * 1e-17;
+                ? Number(scientificValue) * 1e-12
+                : Number(scientificValue) * 1e-12;
               
               return infos.concat({
                 date: new Date(sample.attributes.StdTime),
@@ -225,8 +225,8 @@ const MapView = forwardRef(({
               const scientificValue = Number(rawValue).toExponential();
               
               const convertedValue = variable === 'NO2'
-                ? Number(scientificValue) * 1e-14
-                : Number(scientificValue) * 1e-17;
+                ? Number(scientificValue) * 1e-12
+                : Number(scientificValue) * 1e-12;
               
               // Only include positive values
               if (convertedValue > 0) {
@@ -529,8 +529,8 @@ const MapView = forwardRef(({
             
             // Use correct conversion factor based on variable
             const convertedValue = variable === 'NO2'
-              ? Number(scientificValue) * 1e-14
-              : Number(scientificValue) * 1e-17;
+              ? Number(scientificValue) * 1e-12
+              : Number(scientificValue) * 1e-12;
             
             const date = new Date(sample.attributes.StdTime);
             const sampleYear = date.getFullYear();
@@ -940,6 +940,19 @@ const MapView = forwardRef(({
     }
   };
 
+  // Add this function to the MapView component
+  const centerMapOnLocation = (location) => {
+    if (viewRef.current && location) {
+      viewRef.current.goTo({
+        center: [location.longitude, location.latitude],
+        zoom: viewRef.current.zoom  // Maintain current zoom level
+      }, {
+        duration: 1000,  // Animate over 1 second
+        easing: "ease-in-out"
+      });
+    }
+  };
+
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     fetchLocationData: (location, date, variable) => {
@@ -954,7 +967,9 @@ const MapView = forwardRef(({
     fetchDailyData: (location, year, variable) => {
       fetchDailyData(location, year, variable);
     },
-    updateLayerTimeExtent
+    updateLayerTimeExtent,
+    // Add the new method
+    centerMapOnLocation
   }));
 
   return (
