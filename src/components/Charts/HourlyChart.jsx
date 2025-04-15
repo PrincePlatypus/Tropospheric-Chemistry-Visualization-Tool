@@ -10,6 +10,7 @@ import {
   Legend
 } from 'chart.js';
 import { APP_CONFIG } from '../../config/appConfig';
+import { generateHourlyTestData } from '../../utils/testData';
 
 ChartJS.register(
   CategoryScale,
@@ -30,49 +31,40 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
     border 
   } = APP_CONFIG.general.ui.theme;
 
-  // Generate fallback data if no real data is provided
-  const generateFallbackData = () => {
+  // Calculate moving average for hourly data
+  const calculateMovingAverage = (hourlyData, hourIndex) => {
     const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
-    
-    // Generate dates for 3 days before and 3 days after selected date
-    const dates = Array(7).fill(0).map((_, index) => {
-      const date = new Date(selectedDate);
-      date.setDate(date.getDate() - 3 + index);
-      return date;
-    });
+    const halfRange = Math.floor(MOVING_AVERAGE_RANGE / 2);
+    let sum = 0;
+    let count = 0;
 
-    // Generate random data for each day
-    const hourlyData = dates.map(date => 
-      Array(24).fill(0).map(() => Math.random() * 10)
-    );
-
-    // Calculate moving average
-    const calculateMovingAverage = (hourIndex) => {
-      const halfRange = Math.floor(MOVING_AVERAGE_RANGE / 2);
-      let sum = 0;
-      let count = 0;
-
-      // For each day
-      for (let dayData of hourlyData) {
-        // Look at hours within the range
-        for (let h = hourIndex - halfRange; h <= hourIndex + halfRange; h++) {
-          // Handle wrapping around midnight
-          const wrappedHour = ((h % 24) + 24) % 24;
-          if (dayData[wrappedHour] !== null && !isNaN(dayData[wrappedHour])) {
-            sum += dayData[wrappedHour];
-            count++;
-          }
+    // For each day
+    for (let dayData of hourlyData) {
+      // Look at hours within the range
+      for (let h = hourIndex - halfRange; h <= hourIndex + halfRange; h++) {
+        // Handle wrapping around midnight
+        const wrappedHour = ((h % 24) + 24) % 24;
+        if (dayData[wrappedHour] !== null && !isNaN(dayData[wrappedHour])) {
+          sum += dayData[wrappedHour];
+          count++;
         }
       }
-      return count > 0 ? sum / count : null;
-    };
+    }
+    return count > 0 ? sum / count : null;
+  };
 
+  // Process test data into chart format
+  const processTestData = (testData) => {
+    const { dates, hourlyData, themeColors } = testData;
+    const { accent, border } = themeColors;
+    const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
+    
     // Generate moving average data
     const movingAverageData = Array(24).fill(0)
-      .map((_, hour) => calculateMovingAverage(hour));
+      .map((_, hour) => calculateMovingAverage(hourlyData, hour));
 
     return {
-      labels: Array(25).fill(0).map((_, i) => `${i.toString().padStart(2, '0')}:00`),
+      labels: Array(24).fill(0).map((_, i) => `${i.toString().padStart(2, '0')}:00`),
       datasets: [
         // Individual day datasets
         ...dates.map((date, index) => ({
@@ -166,8 +158,25 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
     }
   };
 
-  // Use real data if available, otherwise use fallback data
-  const chartData = realData || generateFallbackData();
+  // Use real data if available, otherwise use test data if enabled
+  let chartData;
+  if (realData) {
+    chartData = realData;
+  } else {
+    // Get test data
+    const testData = generateHourlyTestData(selectedDate, { accent, border });
+    
+    if (testData) {
+      // Process test data with our component's moving average calculation
+      chartData = processTestData(testData);
+    } else {
+      // No test data and no real data - show empty chart
+      chartData = {
+        labels: Array(24).fill(0).map((_, i) => `${i}:00`),
+        datasets: []
+      };
+    }
+  }
 
   return (
     <div style={{ 

@@ -72,6 +72,23 @@ export const APP_CONFIG = {
         noLocationSelected: "No location selected", // src/App.js:L360
         noDateSelected: "No date selected", // src/App.js:L364
       },
+    },
+    // --- Testing Configuration ---
+    testing: {
+      // Test data mode: "off", "random", or a pattern name like "pattern1"
+      hourlyTestMode: "pattern1",
+      monthlyTestMode: "pattern1",
+      dailyTestMode: "seasonal",
+      
+      // Test data configuration for random generation
+      randomData: {
+        // Random data generation ranges
+        hourlyValueRange: [0, 10],  // Min/max values for hourly data
+        dailyValueRange: [0, 300],  // Min/max values for daily data
+        monthlyValueRange: [0, 10], // Min/max values for monthly data
+        // Seed for random number generation (for consistent test data)
+        randomSeed: 12345
+      }
     }
   },
 
