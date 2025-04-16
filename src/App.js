@@ -575,6 +575,7 @@ function App() {
                         onMonthlyDataUpdate={handleMonthlyDataUpdate}
                         onDailyDataUpdate={handleDailyDataUpdate}
                         fetchData={fetchData}
+                        selectedLocation={selectedLocation}
                     />
                 </div>
                 {/* Pixel Value Popup */}

@@ -5,6 +5,7 @@ import Home from "@arcgis/core/widgets/Home";
 import Compass from "@arcgis/core/widgets/Compass";
 import Legend from "@arcgis/core/widgets/Legend";
 import { APP_CONFIG } from '../../config/appConfig';
+import Graphic from "@arcgis/core/Graphic";
 
 const MapView = forwardRef(({ 
   onLocationSelect, 
@@ -18,7 +19,8 @@ const MapView = forwardRef(({
   onHourlyDataUpdate,
   onMonthlyDataUpdate,
   onDailyDataUpdate,
-  fetchData
+  fetchData,
+  selectedLocation
 }, ref) => {
   const mapDiv = useRef(null);
   const layersRef = useRef({ 
@@ -29,6 +31,7 @@ const MapView = forwardRef(({
   const viewRef = useRef(null);
   const websceneRef = useRef(null);
   const timestampsRef = useRef([]);
+  const locationGraphicRef = useRef(null);
 
   // Function to create legend
   const createLegend = async (layer) => {
@@ -778,7 +781,44 @@ const MapView = forwardRef(({
     };
   }, []); // Keep empty to run once
 
-  // Separate effect for click handler
+  // Add function to manage the location marker
+  const updateLocationMarker = (location) => {
+    if (!viewRef.current) return;
+
+    // Remove existing graphic if it exists
+    if (locationGraphicRef.current) {
+      viewRef.current.graphics.remove(locationGraphicRef.current);
+    }
+
+    // Create new graphic
+    const point = {
+      type: "point",
+      longitude: location.longitude,
+      latitude: location.latitude
+    };
+
+    const markerSymbol = {
+      type: "simple-marker",
+      style: "circle",
+      color: APP_CONFIG.general.ui.theme.accent,
+      size: "8px",
+      outline: {
+        color: [255, 255, 255],
+        width: 1
+      }
+    };
+
+    const graphic = new Graphic({
+      geometry: point,
+      symbol: markerSymbol
+    });
+
+    // Add graphic to the view
+    viewRef.current.graphics.add(graphic);
+    locationGraphicRef.current = graphic;
+  };
+
+  // Modify the click handler effect to use the new function
   useEffect(() => {
     if (!viewRef.current) return;
     
@@ -790,6 +830,7 @@ const MapView = forwardRef(({
           longitude: mapPoint.longitude
         };
         
+        updateLocationMarker(location);
         onLocationSelect(location);
         
         if (selectedDate) {
@@ -804,6 +845,13 @@ const MapView = forwardRef(({
       }
     };
   }, [selectedDate, selectedVariable, selectedYear, fetchData, onLocationSelect]);
+
+  // Add effect to handle location updates from props
+  useEffect(() => {
+    if (selectedLocation) {
+      updateLocationMarker(selectedLocation);
+    }
+  }, [selectedLocation]);
 
   // Separate effect to handle variable changes
   useEffect(() => {
