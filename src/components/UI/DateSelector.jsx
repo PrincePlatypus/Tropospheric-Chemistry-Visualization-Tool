@@ -7,13 +7,15 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
   const { backgroundPrimary, backgroundSecondary, accent, text, border } = APP_CONFIG.general.ui.theme;
   const [isOpen, setIsOpen] = useState(false);
 
-  // Format date for display
+  // Format date for display using 24-hour format
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
+      hour12: false, // Use 24-hour format
+      minute: '2-digit'
     });
   };
 
@@ -121,16 +123,16 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
       <DatePicker
         selected={selectedDate}
         onChange={onDateChange}
-        dateFormat="MMM d, yyyy h:mm aa"
+        dateFormat="MMM d, yyyy HH:mm" // Use HH for 24-hour format
         showTimeSelect
-        timeFormat="h:mm aa"
-        timeIntervals={15}  // Show 15-minute intervals
+        timeFormat="HH:mm"            // Use HH for 24-hour format
+        timeIntervals={15}
         timeCaption="Time"
         showMonthDropdown
-        showYearDropdown={false} // Hide year dropdown
+        showYearDropdown={false}
         dropdownMode="select"
         todayButton="Today"
-        maxDate={new Date()} // Prevent selecting future dates
+        maxDate={new Date()}
         onInputClick={() => setIsOpen(!isOpen)}
         onClickOutside={() => setIsOpen(false)}
       />

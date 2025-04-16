@@ -103,11 +103,20 @@ const MapView = forwardRef(({
       
       if (activeLayer) {
         try {
-          const startOfDay = new Date(date);
-          startOfDay.setHours(0, 0, 0, 0);
+          // Create UTC dates for the query
+          const startOfDay = new Date(Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            0, 0, 0, 0
+          ));
           
-          const endOfDay = new Date(date);
-          endOfDay.setHours(23, 59, 59, 999);
+          const endOfDay = new Date(Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            23, 59, 59, 999
+          ));
 
           const response = await activeLayer.getSamples({
             geometry: {
@@ -167,14 +176,20 @@ const MapView = forwardRef(({
       
       if (activeLayer) {
         try {
-          // Create dates for 3 days before and 3 days after
-          const startDate = new Date(date);
-          startDate.setDate(date.getDate() - APP_CONFIG.components.charts.hourly.dataFetchDaysRange);
-          startDate.setHours(0, 0, 0, 0);
+          // Create UTC dates for 3 days before and 3 days after
+          const startDate = new Date(Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate() - APP_CONFIG.components.charts.hourly.dataFetchDaysRange,
+            0, 0, 0, 0
+          ));
           
-          const endDate = new Date(date);
-          endDate.setDate(date.getDate() + APP_CONFIG.components.charts.hourly.dataFetchDaysRange);
-          endDate.setHours(23, 59, 59, 999);
+          const endDate = new Date(Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate() + APP_CONFIG.components.charts.hourly.dataFetchDaysRange,
+            23, 59, 59, 999
+          ));
 
           const response = await activeLayer.getSamples({
             geometry: {
