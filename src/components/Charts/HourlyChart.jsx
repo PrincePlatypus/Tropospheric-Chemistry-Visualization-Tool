@@ -12,6 +12,8 @@ import {
 import { APP_CONFIG } from '../../config/appConfig';
 import { generateHourlyTestData } from '../../utils/testData';
 
+
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -24,6 +26,13 @@ ChartJS.register(
 
 const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selectedDate }) => {
   // Extract theme colors from APP_CONFIG
+  const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
+  const borderColorAverage = APP_CONFIG.general.ui.theme.chartMovingAverage;  
+  const fallbackYAxisTitle = APP_CONFIG.components.charts.common.fallbackYAxisTitle;
+  const chartHourlyTextTitle = APP_CONFIG.components.charts.hourly.text.title.replace('${variable}', selectedVariable)
+
+
+
   const { 
     backgroundPrimary, 
     accent, 
@@ -33,7 +42,7 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
 
   // Calculate moving average for hourly data
   const calculateMovingAverage = (hourlyData, hourIndex) => {
-    const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
+    
     const halfRange = Math.floor(MOVING_AVERAGE_RANGE / 2);
     let sum = 0;
     let count = 0;
@@ -57,7 +66,6 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
   const processTestData = (testData) => {
     const { dates, hourlyData, themeColors } = testData;
     const { accent, border } = themeColors;
-    const MOVING_AVERAGE_RANGE = APP_CONFIG.components.charts.hourly.movingAverageHoursRange;
     
     // Generate moving average data
     const movingAverageData = Array(24).fill(0)
@@ -82,7 +90,7 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
         {
           label: `${MOVING_AVERAGE_RANGE}hr Moving Average`,
           data: movingAverageData,
-          borderColor: APP_CONFIG.general.ui.theme.chartMovingAverage,
+          borderColor: borderColorAverage,
           borderWidth: 2,
           borderDash: [5, 5],
           tension: 0.3,
@@ -111,7 +119,7 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
       },
       title: {
         display: true,
-        text: APP_CONFIG.components.charts.hourly.text.title.replace('${variable}', selectedVariable),
+        text: chartHourlyTextTitle,
         color: text,
         font: { size: 12 },
         padding: {
@@ -139,7 +147,7 @@ const HourlyChart = ({ data: realData, selectedVariable, variableConfig, selecte
         },
         title: {
           display: true,
-          text: variableConfig?.units || APP_CONFIG.components.charts.common.fallbackYAxisTitle,
+          text: variableConfig?.units || fallbackYAxisTitle,
           color: text,
           font: { size: 10 },
           padding: { top: 0, bottom: 0 }

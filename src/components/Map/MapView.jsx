@@ -17,7 +17,8 @@ const MapView = forwardRef(({
   initialDate,
   onHourlyDataUpdate,
   onMonthlyDataUpdate,
-  onDailyDataUpdate
+  onDailyDataUpdate,
+  fetchData
 }, ref) => {
   const mapDiv = useRef(null);
   const layersRef = useRef({ 
@@ -27,6 +28,7 @@ const MapView = forwardRef(({
   });
   const viewRef = useRef(null);
   const websceneRef = useRef(null);
+  const timestampsRef = useRef([]);
 
   // Function to create legend
   const createLegend = async (layer) => {
@@ -90,36 +92,6 @@ const MapView = forwardRef(({
     return legendContainer;
   };
 
-  // Function to identify features at click location
-  const identifyFeatures = async (event, layer) => {
-    try {
-      const response = await layer.identify({
-        geometry: event.mapPoint,
-        timeExtent: {
-          start: selectedDate,
-          end: selectedDate
-        },
-        tolerance: 2,
-        returnGeometry: false
-      });
-
-      if (response.results?.length > 0) {
-        const attributes = response.results[0].attributes;
-        const value = attributes[selectedVariable];
-        if (value != null) {
-          // Convert value based on variable type
-          const convertedValue = selectedVariable === 'NO2' 
-            ? value * 2.69e10  // Convert to ppb for NO2
-            : value * 2.69e13; // Convert to ppt for HCHO
-          return convertedValue;
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error('Error identifying features:', error);
-      return null;
-    }
-  };
 
   // Function to fetch data for a location
   const fetchLocationData = async (location, date, variable) => {
@@ -219,6 +191,11 @@ const MapView = forwardRef(({
           });
 
           if (response?.samples) {
+            // Store available timestamps
+            timestampsRef.current = response.samples
+              .map(sample => sample.attributes.StdTime)
+              .sort((a, b) => a - b);
+
             const hourlyData = response.samples.reduce((infos, sample) => {
               const attributeName = variable === 'NO2' ? 'NO2_Troposphere' : 'HCHO';
               const rawValue = sample.attributes[attributeName];
@@ -551,16 +528,14 @@ const MapView = forwardRef(({
           onDailyDataUpdate(dailyData);
         }
       } catch (error) {
-        console.error(`❌ Error fetching daily data for ${variable}:`, error);
         onDailyDataUpdate([]);
       }
     } else {
-      console.log(`❌ Could not find daily layer for ${variable}`);
       onDailyDataUpdate([]);
     }
   };
 
-  // Modify the effect that initializes the view to run only once
+  // Main effect for map initialization - keep empty deps array
   useEffect(() => {
     if (viewRef.current) {
       return;
@@ -737,32 +712,6 @@ const MapView = forwardRef(({
       `;
       view.container.appendChild(attribution);
 
-      // Click handler for map interactions
-      view.on('click', async (event) => {
-        if (event.mapPoint) {
-          const location = {
-            longitude: event.mapPoint.longitude,
-            latitude: event.mapPoint.latitude
-          };
-          onLocationSelect(location);
-
-          // Fetch all data types for the clicked location
-          try {
-            // Fetch hourly data
-            await fetchLocationData(location, selectedDate, selectedVariable);
-            await fetchHourlyRangeData(location, selectedDate, selectedVariable);
-            
-            // Fetch monthly data
-            await fetchMonthlyData(location, selectedYear, selectedVariable);
-            
-            // Fetch daily data - THIS WAS MISSING
-            await fetchDailyData(location, selectedYear, selectedVariable);
-          } catch (error) {
-            console.error('Error fetching data after map click:', error);
-          }
-        }
-      });
-
       // Loading indicator
       const loadingIndicator = document.createElement('div');
       loadingIndicator.className = 'esri-widget';
@@ -812,8 +761,34 @@ const MapView = forwardRef(({
         onViewCreated?.(null);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once regardless of prop changes
+  }, []); // Keep empty to run once
+
+  // Separate effect for click handler
+  useEffect(() => {
+    if (!viewRef.current) return;
+    
+    const clickHandler = viewRef.current.on('click', async (event) => {
+      const mapPoint = event.mapPoint;
+      if (mapPoint) {
+        const location = {
+          latitude: mapPoint.latitude,
+          longitude: mapPoint.longitude
+        };
+        
+        onLocationSelect(location);
+        
+        if (selectedDate) {
+          fetchData(location, selectedDate, selectedVariable, selectedYear);
+        }
+      }
+    });
+
+    return () => {
+      if (clickHandler) {
+        clickHandler.remove();
+      }
+    };
+  }, [selectedDate, selectedVariable, selectedYear, fetchData, onLocationSelect]);
 
   // Separate effect to handle variable changes
   useEffect(() => {
@@ -886,19 +861,12 @@ const MapView = forwardRef(({
 
   // Simplify updateLayerTimeExtent to match sea-surface example more closely
   const updateLayerTimeExtent = (date) => {
-    console.log('🔄 MAPVIEW: updateLayerTimeExtent called with date', date.toISOString());
-    
-    if (!viewRef.current) {
-      console.log('❌ View not available');
-      return;
-    }
-
     // Focus specifically on the hourly layer group
+    if (!viewRef.current) return;
+
     const hourlyGroup = layersRef.current.hourlyGroup;
     
     if (hourlyGroup) {
-      console.log('🔄 Found hourly group:', hourlyGroup.title);
-      
       // Make sure the group is visible
       hourlyGroup.visible = true;
       
@@ -908,35 +876,30 @@ const MapView = forwardRef(({
       );
       
       if (activeLayer) {
-        console.log('🔄 Found active layer:', activeLayer.title);
-        
         // Make sure the layer is visible
         activeLayer.visible = true;
         
         // ONLY update the mosaicRule - don't touch timeExtent
         // This matches the sea-surface-temperature example exactly
         if (activeLayer.mosaicRule) {
-          console.log('🔄 Updating only mosaicRule with timestamp:', date.valueOf());
+          const targetTimestamp = date.valueOf();
+          
+          // Find closest available timestamp
+          let closestTimestamp = targetTimestamp;
+          if (timestampsRef.current.length > 0) {
+            closestTimestamp = timestampsRef.current.reduce((prev, curr) => {
+              return (Math.abs(curr - targetTimestamp) < Math.abs(prev - targetTimestamp) ? curr : prev);
+            });
+          }
           
           const mosaicRule = activeLayer.mosaicRule.clone();
           if (mosaicRule.multidimensionalDefinition && 
               mosaicRule.multidimensionalDefinition.length > 0) {
-            // Set the timestamp in the mosaicRule
-            mosaicRule.multidimensionalDefinition[0].values = [date.valueOf()];
-            
-            // Apply the updated mosaicRule
+            mosaicRule.multidimensionalDefinition[0].values = [closestTimestamp];
             activeLayer.mosaicRule = mosaicRule;
-            
-            console.log('🔄 MosaicRule updated successfully');
           }
-        } else {
-          console.log('❌ Layer has no mosaicRule to update');
         }
-      } else {
-        console.log('❌ Could not find hourly layer:', `${selectedVariable} Hourly`);
       }
-    } else {
-      console.log('❌ Could not find hourly group');
     }
   };
 

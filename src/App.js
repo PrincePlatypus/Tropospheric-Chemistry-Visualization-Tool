@@ -145,12 +145,9 @@ function App() {
   };
 
   const handleLocationChange = (location) => {
-    console.log('🔷 APP: Location change handler called with', location);
     setSelectedLocation(location);
     
-    // Fetch data when location changes
     if (mapViewRef.current && selectedDate) {
-      console.log('🔷 APP: Fetching data for new location');
       mapViewRef.current.updateLayerTimeExtent(selectedDate);
       mapViewRef.current.fetchLocationData(location, selectedDate, selectedVariable);
       mapViewRef.current.fetchHourlyRangeData(location, selectedDate, selectedVariable);
@@ -566,17 +563,18 @@ function App() {
                 <div style={mapGhostContainerStyle}>
                     <MapView 
                         ref={mapViewRef}
-                        onLocationSelect={setSelectedLocation}
                         selectedVariable={selectedVariable}
-                        onViewCreated={setView}
-                        onPixelValueChange={setPixelValue}
                         selectedDate={selectedDate}
                         selectedYear={selectedYear}
-                        initialLocation={INITIAL_LOCATION}
-                        initialDate={INITIAL_DATE}
+                        onLocationSelect={handleLocationChange}
+                        onViewCreated={setView}
+                        onPixelValueChange={setPixelValue}
+                        initialLocation={defaultState.location}
+                        initialDate={defaultState.date}
                         onHourlyDataUpdate={handleHourlyDataUpdate}
                         onMonthlyDataUpdate={handleMonthlyDataUpdate}
                         onDailyDataUpdate={handleDailyDataUpdate}
+                        fetchData={fetchData}
                     />
                 </div>
                 {/* Pixel Value Popup */}
