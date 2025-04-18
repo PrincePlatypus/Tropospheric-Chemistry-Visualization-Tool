@@ -8,6 +8,7 @@ import { APP_CONFIG } from './config/appConfig';
 import DateSelector from './components/UI/DateSelector';
 import LocationInput from './components/UI/LocationInput';
 import { useDataFetching } from './hooks/useDataFetching';
+import { DateProvider, useDate } from './contexts/DateContext';
 
 function App() {
   // APP_CONFIG variables
@@ -27,16 +28,16 @@ function App() {
   const INITIAL_VARIABLE = defaultState.variable;
   const MOVING_AVERAGE_RANGE = chartsConfig.hourly.movingAverageHoursRange;
 
-  // State with initial values
-  const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
-  const [selectedLocation, setSelectedLocation] = useState(INITIAL_LOCATION);
-  const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
+  // Replace the selectedDate state with the context
+  const { date: selectedDate, setDate: setSelectedDate } = useDate();
   const [selectedYear, setSelectedYear] = useState(INITIAL_DATE.getFullYear());
   const [pixelValue, setPixelValue] = useState(null);
   const [view, setView] = useState(null);
   const [hourlyChartData, setHourlyChartData] = useState(null);
   const [monthlyChartData, setMonthlyChartData] = useState(null);
   const [dailyChartData, setDailyChartData] = useState([]);
+  const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
+  const [selectedLocation, setSelectedLocation] = useState(INITIAL_LOCATION);
   const [variableConfigApp, setVariableConfigApp] = useState(APP_CONFIG.variables[INITIAL_VARIABLE]);
 
   // Add ref for MapView component
@@ -184,7 +185,7 @@ function App() {
 
   const leftContainerStyle = {
     display: 'grid',
-    gridTemplateRows: '10fr 90fr',
+    gridTemplateRows: '15fr 85fr',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
@@ -451,15 +452,6 @@ function App() {
                 <span>{uiText.labels.date}: {dateDisplay}</span>
               </div> */}
 
-              {/* Value */}
-              <div style={controlItemStyle}>
-                {pixelValue ? (
-                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
-                ) : (
-                  <span>{uiText.status.loadingInitialData}</span>
-                )}
-              </div>
-
               {/* Year Selector */}
               {/* Year Selector
               <div style={yearControlStyle}>
@@ -504,6 +496,10 @@ function App() {
                 </button>
               </div> */}
 
+              {/* Value */}
+              <div style={controlItemStyle}>
+                Please input date and location
+              </div>  
 
 
               {/* Date Selector */}
@@ -523,6 +519,18 @@ function App() {
                   onLocationChange={handleLocationChange}
                 />
               </div>
+
+              {/* Spacer */}
+              <div style={{ height: '10px' }}></div>
+
+              {/* Value */}
+              <div style={controlItemStyle}>
+                {pixelValue ? (
+                  <span>{uiText.labels.value}: {pixelValue.toFixed(chartsConfig.common.valuePrecision)} {getUnitLabel()}</span>
+                ) : (
+                  <span>{uiText.status.loadingInitialData}</span>
+                )}
+              </div>  
 
             </div>
                         {/* Hourly Chart */}
@@ -602,4 +610,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppWithContext() {
+  return (
+    <DateProvider>
+      <App />
+    </DateProvider>
+  );
+}

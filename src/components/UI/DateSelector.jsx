@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { APP_CONFIG } from '../../config/appConfig';
+import { useDate } from '../../contexts/DateContext';
 
-const DateSelector = ({ selectedDate, onDateChange }) => {
+const DateSelector = () => {
+  const { date, setDate } = useDate();
   const { backgroundPrimary, backgroundSecondary, accent, text, border } = APP_CONFIG.general.ui.theme;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -56,11 +58,12 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
       top: 8px;
     }
     .react-datepicker__input-container input {
-      background-color: ${backgroundPrimary};
+      background-color: white !important;
+      color: #333 !important;
       border: 1px solid ${border};
       border-radius: 4px;
       color: ${text};
-      font-size: 14px;
+      font-size: 12px;
       padding: 4px 8px;
       width: 150px;
       text-align: center;
@@ -121,8 +124,8 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
     <div style={containerStyle}>
       <style>{customStyles}</style>
       <DatePicker
-        selected={selectedDate}
-        onChange={onDateChange}
+        selected={date}
+        onChange={setDate}
         dateFormat="MMM d, yyyy HH:mm" // Use HH for 24-hour format
         showTimeSelect
         timeFormat="HH:mm"            // Use HH for 24-hour format

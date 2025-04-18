@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react';
 import WebScene from '@arcgis/core/WebScene';
 import SceneView from '@arcgis/core/views/SceneView';
 import Home from "@arcgis/core/widgets/Home";
@@ -208,7 +208,7 @@ const MapView = forwardRef(({
             returnFirstValueOnly: false
           });
 
-          if (response?.samples) {
+          if (response?.samples && response.samples.length > 0) {
             // Store available timestamps
             timestampsRef.current = response.samples
               .map(sample => sample.attributes.StdTime)
@@ -235,7 +235,13 @@ const MapView = forwardRef(({
 
             // Sort by date
             hourlyData.sort((a, b) => a.date - b.date);
-
+            
+            // Guard against empty data
+            if (hourlyData.length === 0) {
+              onHourlyDataUpdate([]);
+              return;
+            }
+            
             // Group data by day
             const groupedByDay = hourlyData.reduce((acc, item) => {
               const day = item.date.toLocaleDateString('en-US', { 
@@ -398,11 +404,21 @@ const MapView = forwardRef(({
 
             // Update the chart
             onHourlyDataUpdate(chartData);
+          } else {
+            // No samples found - set empty data
+            timestampsRef.current = [];
+            onHourlyDataUpdate([]);
           }
         } catch (error) {
           console.error('Error getting hourly range:', error);
+          timestampsRef.current = [];
+          onHourlyDataUpdate([]);
         }
+      } else {
+        onHourlyDataUpdate([]);
       }
+    } else {
+      onHourlyDataUpdate([]);
     }
   };
 
@@ -853,31 +869,50 @@ const MapView = forwardRef(({
     }
   }, [selectedLocation]);
 
-  // Separate effect to handle variable changes
-  useEffect(() => {
-    updateLayerVisibility(selectedVariable);
-  }, [selectedVariable]);
-
-  // Update legend when variable changes
-  useEffect(() => {
-    const hourlyGroup = layersRef.current.hourlyGroup;
-    if (hourlyGroup && viewRef.current) {
-      const activeLayer = hourlyGroup.layers.find(layer => 
-        layer.title === `${selectedVariable} Hourly`
-      );
-      if (activeLayer) {
-        // Remove old legend
-        const oldLegend = viewRef.current.container.querySelector('.legend-container');
-        if (oldLegend) {
-          oldLegend.remove();
+  // Create a debounced version of updateLayerTimeExtent
+  const debouncedUpdateLayerTimeExtent = useMemo(() => {
+    let timeout;
+    return (date) => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (!viewRef.current) return;
+        
+        const hourlyGroup = layersRef.current.hourlyGroup;
+        if (hourlyGroup) {
+          hourlyGroup.visible = true;
+          
+          const activeLayer = hourlyGroup.layers.find(layer => 
+            layer.title === `${selectedVariable} Hourly`
+          );
+          
+          if (activeLayer) {
+            activeLayer.visible = true;
+            
+            if (activeLayer.mosaicRule) {
+              try {
+                const targetTimestamp = date.valueOf();
+                
+                let closestTimestamp = targetTimestamp;
+                if (timestampsRef.current.length > 0) {
+                  closestTimestamp = timestampsRef.current.reduce((prev, curr) => {
+                    return (Math.abs(curr - targetTimestamp) < Math.abs(prev - targetTimestamp) ? curr : prev);
+                  });
+                }
+                
+                const mosaicRule = activeLayer.mosaicRule.clone();
+                if (mosaicRule.multidimensionalDefinition && 
+                    mosaicRule.multidimensionalDefinition.length > 0) {
+                  mosaicRule.multidimensionalDefinition[0].values = [closestTimestamp];
+                  activeLayer.mosaicRule = mosaicRule;
+                }
+              } catch (error) {
+                console.debug('Time extent update error:', error.message);
+              }
+            }
+          }
         }
-        // Create new legend
-        createLegend(activeLayer).then(legend => {
-          legend.classList.add('legend-container');
-          viewRef.current.container.appendChild(legend);
-        });
-      }
-    }
+      }, 100); // 100ms debounce time
+    };
   }, [selectedVariable]);
 
   // Function to update layer visibility
@@ -922,49 +957,16 @@ const MapView = forwardRef(({
     }
   }, [websceneRef.current]);
 
-  // Simplify updateLayerTimeExtent to match sea-surface example more closely
-  const updateLayerTimeExtent = (date) => {
-    // Focus specifically on the hourly layer group
-    if (!viewRef.current) return;
-
-    const hourlyGroup = layersRef.current.hourlyGroup;
+  // Update the variable change effect
+  useEffect(() => {
+    updateLayerVisibility(selectedVariable);
     
-    if (hourlyGroup) {
-      // Make sure the group is visible
-      hourlyGroup.visible = true;
-      
-      // Find the active hourly layer
-      const activeLayer = hourlyGroup.layers.find(layer => 
-        layer.title === `${selectedVariable} Hourly`
-      );
-      
-      if (activeLayer) {
-        // Make sure the layer is visible
-        activeLayer.visible = true;
-        
-        // ONLY update the mosaicRule - don't touch timeExtent
-        // This matches the sea-surface-temperature example exactly
-        if (activeLayer.mosaicRule) {
-          const targetTimestamp = date.valueOf();
-          
-          // Find closest available timestamp
-          let closestTimestamp = targetTimestamp;
-          if (timestampsRef.current.length > 0) {
-            closestTimestamp = timestampsRef.current.reduce((prev, curr) => {
-              return (Math.abs(curr - targetTimestamp) < Math.abs(prev - targetTimestamp) ? curr : prev);
-            });
-          }
-          
-          const mosaicRule = activeLayer.mosaicRule.clone();
-          if (mosaicRule.multidimensionalDefinition && 
-              mosaicRule.multidimensionalDefinition.length > 0) {
-            mosaicRule.multidimensionalDefinition[0].values = [closestTimestamp];
-            activeLayer.mosaicRule = mosaicRule;
-          }
-        }
-      }
+    if (selectedDate) {
+      debouncedUpdateLayerTimeExtent(selectedDate);
     }
-  };
+    
+    // Legend update code...
+  }, [selectedVariable, selectedDate, debouncedUpdateLayerTimeExtent]);
 
   // Add this function to the MapView component
   const centerMapOnLocation = (location) => {
@@ -993,7 +995,7 @@ const MapView = forwardRef(({
     fetchDailyData: (location, year, variable) => {
       fetchDailyData(location, year, variable);
     },
-    updateLayerTimeExtent,
+    updateLayerTimeExtent: debouncedUpdateLayerTimeExtent,
     // Add the new method
     centerMapOnLocation
   }));

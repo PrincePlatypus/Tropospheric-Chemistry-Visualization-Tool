@@ -15,10 +15,10 @@ const LocationInput = ({ selectedLocation, onLocationChange }) => {
   }, [selectedLocation]);
 
   const inputStyle = {
-    backgroundColor: backgroundPrimary,
+    backgroundColor: 'white',
     border: `1px solid ${border}`,
     borderRadius: '4px',
-    color: text,
+    color: '#333',
     padding: '4px 8px',
     width: '120px',
     fontSize: '12px',
