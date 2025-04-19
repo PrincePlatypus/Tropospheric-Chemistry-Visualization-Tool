@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import WebScene from '@arcgis/core/WebScene';
 import SceneView from '@arcgis/core/views/SceneView';
 import Home from "@arcgis/core/widgets/Home";
@@ -500,72 +500,45 @@ const MapView = forwardRef(({
 
   // Update the fetchDailyData function with better error handling
   const fetchDailyData = async (location, year, variable) => {
-    if (!layersRef.current) return;
-    
     const dailyGroup = layersRef.current.dailyGroup;
-    if (!dailyGroup) return;
-    
-    // Get the layer title from appConfig based on the variable
-    const layerTitle = APP_CONFIG.variables[variable].layers.daily.title;
-    
-    const activeLayer = dailyGroup.layers.find(layer => 
-      layer.title === layerTitle
-    );
-    
-    if (activeLayer) {
-      try {
-        const startDate = new Date(year, 0, 1);
-        const endDate = new Date(year, 11, 31, 23, 59, 59);
-        
-        const response = await activeLayer.getSamples({
-          geometry: {
-            type: "point",
-            longitude: location.longitude,
-            latitude: location.latitude,
-            spatialReference: { wkid: 4326 }
-          },
-          timeExtent: {
-            start: startDate,
-            end: endDate
-          },
-          returnFirstValueOnly: false
-        });
+    if (dailyGroup) {
+      const activeLayer = dailyGroup.layers.find(layer => 
+        layer.title === `${variable} Daily`
+      );
+      
+      if (activeLayer) {
+        try {
+          const startDate = new Date(year, 0, 1);
+          const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-        if (response?.samples) {
-          const attributeName = variable === 'NO2' ? 'NO2_Troposphere' : 'HCHO';
-          
-          const dailyData = response.samples.reduce((infos, sample) => {
-            const rawValue = sample.attributes[attributeName];
-            const scientificValue = Number(rawValue).toExponential();
-            
-            // Use correct conversion factor based on variable
-            const convertedValue = variable === 'NO2'
-              ? Number(scientificValue) * 1e-12
-              : Number(scientificValue) * 1e-12;
-            
-            const date = new Date(sample.attributes.StdTime);
-            const sampleYear = date.getFullYear();
-            
-            // Only include data from the requested year
-            if (sampleYear === year) {
-              return infos.concat({
-                date,
-                value: convertedValue
-              });
-            }
-            return infos;
-          }, []);
+          const response = await activeLayer.getSamples({
+            geometry: {
+              type: "point",
+              longitude: location.longitude,
+              latitude: location.latitude,
+              spatialReference: { wkid: 4326 }
+            },
+            timeExtent: {
+              start: startDate,
+              end: endDate
+            },
+            returnFirstValueOnly: false
+          });
 
-          // Sort by date
-          dailyData.sort((a, b) => a.date - b.date);
-          
-          onDailyDataUpdate(dailyData);
+          if (response?.samples) {
+            const dailyData = response.samples.map(sample => ({
+              date: new Date(sample.attributes.StdTime),
+              value: sample.attributes[variable === 'NO2' ? 'NO2_Troposphere' : 'HCHO'] * 1e-12
+            }));
+            
+            onDailyDataUpdate(dailyData);
+          } else {
+            onDailyDataUpdate([]);
+          }
+        } catch (error) {
+          onDailyDataUpdate([]);
         }
-      } catch (error) {
-        onDailyDataUpdate([]);
       }
-    } else {
-      onDailyDataUpdate([]);
     }
   };
 
@@ -869,51 +842,36 @@ const MapView = forwardRef(({
     }
   }, [selectedLocation]);
 
-  // Create a debounced version of updateLayerTimeExtent
-  const debouncedUpdateLayerTimeExtent = useMemo(() => {
-    let timeout;
-    return (date) => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        if (!viewRef.current) return;
-        
-        const hourlyGroup = layersRef.current.hourlyGroup;
-        if (hourlyGroup) {
-          hourlyGroup.visible = true;
-          
-          const activeLayer = hourlyGroup.layers.find(layer => 
-            layer.title === `${selectedVariable} Hourly`
-          );
-          
-          if (activeLayer) {
-            activeLayer.visible = true;
-            
-            if (activeLayer.mosaicRule) {
-              try {
-                const targetTimestamp = date.valueOf();
-                
-                let closestTimestamp = targetTimestamp;
-                if (timestampsRef.current.length > 0) {
-                  closestTimestamp = timestampsRef.current.reduce((prev, curr) => {
-                    return (Math.abs(curr - targetTimestamp) < Math.abs(prev - targetTimestamp) ? curr : prev);
-                  });
-                }
-                
-                const mosaicRule = activeLayer.mosaicRule.clone();
-                if (mosaicRule.multidimensionalDefinition && 
-                    mosaicRule.multidimensionalDefinition.length > 0) {
-                  mosaicRule.multidimensionalDefinition[0].values = [closestTimestamp];
-                  activeLayer.mosaicRule = mosaicRule;
-                }
-              } catch (error) {
-                console.debug('Time extent update error:', error.message);
-              }
-            }
-          }
+  // Modify the effect that handles variable changes to also update the time extent
+  useEffect(() => {
+    // First update layer visibility
+    updateLayerVisibility(selectedVariable);
+    
+    // Then update the time extent for the newly active layer
+    if (selectedDate) {
+      updateLayerTimeExtent(selectedDate);
+    }
+    
+    // Update legend when variable changes
+    const hourlyGroup = layersRef.current.hourlyGroup;
+    if (hourlyGroup && viewRef.current) {
+      const activeLayer = hourlyGroup.layers.find(layer => 
+        layer.title === `${selectedVariable} Hourly`
+      );
+      if (activeLayer) {
+        // Remove old legend
+        const oldLegend = viewRef.current.container.querySelector('.legend-container');
+        if (oldLegend) {
+          oldLegend.remove();
         }
-      }, 100); // 100ms debounce time
-    };
-  }, [selectedVariable]);
+        // Create new legend
+        createLegend(activeLayer).then(legend => {
+          legend.classList.add('legend-container');
+          viewRef.current.container.appendChild(legend);
+        });
+      }
+    }
+  }, [selectedVariable, selectedDate]);
 
   // Function to update layer visibility
   const updateLayerVisibility = (variable) => {
@@ -957,16 +915,54 @@ const MapView = forwardRef(({
     }
   }, [websceneRef.current]);
 
-  // Update the variable change effect
-  useEffect(() => {
-    updateLayerVisibility(selectedVariable);
+  // Improve updateLayerTimeExtent function with better error handling
+  const updateLayerTimeExtent = (date) => {
+    if (!viewRef.current) return;
+
+    const hourlyGroup = layersRef.current.hourlyGroup;
     
-    if (selectedDate) {
-      debouncedUpdateLayerTimeExtent(selectedDate);
+    if (hourlyGroup) {
+      hourlyGroup.visible = true;
+      
+      const activeLayer = hourlyGroup.layers.find(layer => 
+        layer.title === `${selectedVariable} Hourly`
+      );
+      
+      if (activeLayer) {
+        activeLayer.visible = true;
+        
+        if (activeLayer.mosaicRule) {
+          try {
+            const targetTimestamp = date.valueOf();
+            
+            let closestTimestamp = targetTimestamp;
+            if (timestampsRef.current.length > 0) {
+              closestTimestamp = timestampsRef.current.reduce((prev, curr) => {
+                return (Math.abs(curr - targetTimestamp) < Math.abs(prev - targetTimestamp) ? curr : prev);
+              });
+            }
+            
+            // Add a slight delay before updating mosaicRule to avoid race conditions
+            setTimeout(() => {
+              try {
+                const mosaicRule = activeLayer.mosaicRule.clone();
+                if (mosaicRule.multidimensionalDefinition && 
+                    mosaicRule.multidimensionalDefinition.length > 0) {
+                  mosaicRule.multidimensionalDefinition[0].values = [closestTimestamp];
+                  activeLayer.mosaicRule = mosaicRule;
+                }
+              } catch (error) {
+                // Silently handle any errors during mosaicRule update
+                console.debug('Mosaic rule update error (non-critical):', error.message);
+              }
+            }, 50);
+          } catch (error) {
+            console.debug('Time extent update error (non-critical):', error.message);
+          }
+        }
+      }
     }
-    
-    // Legend update code...
-  }, [selectedVariable, selectedDate, debouncedUpdateLayerTimeExtent]);
+  };
 
   // Add this function to the MapView component
   const centerMapOnLocation = (location) => {
@@ -995,7 +991,7 @@ const MapView = forwardRef(({
     fetchDailyData: (location, year, variable) => {
       fetchDailyData(location, year, variable);
     },
-    updateLayerTimeExtent: debouncedUpdateLayerTimeExtent,
+    updateLayerTimeExtent,
     // Add the new method
     centerMapOnLocation
   }));

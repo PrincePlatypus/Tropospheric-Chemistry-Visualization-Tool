@@ -14,7 +14,7 @@ export const APP_CONFIG = {
       year: new Date().getFullYear(), // Default year selected - src/config/appConfig.js:L44 | src/App.js:L20
       date: new Date(2024, 8, 21), // Default specific date selected - src/config/appConfig.js:L45 | src/App.js:L10
       view: {
-        center: [-83.045220, 42.335428], // src/config/appConfig.js:L48 | src/App.js:L12 | src/components/Map/MapView.jsx:L687
+        center: [-75.0060, 40.7128], // src/config/appConfig.js:L48 | src/App.js:L12 | src/components/Map/MapView.jsx:L687
         zoom: 10, // src/config/appConfig.js:L49
         rotation: 0 // src/config/appConfig.js:L50
       }

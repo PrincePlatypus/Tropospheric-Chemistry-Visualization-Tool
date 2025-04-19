@@ -8,7 +8,6 @@ import { APP_CONFIG } from './config/appConfig';
 import DateSelector from './components/UI/DateSelector';
 import LocationInput from './components/UI/LocationInput';
 import { useDataFetching } from './hooks/useDataFetching';
-import { DateProvider, useDate } from './contexts/DateContext';
 
 function App() {
   // APP_CONFIG variables
@@ -28,16 +27,16 @@ function App() {
   const INITIAL_VARIABLE = defaultState.variable;
   const MOVING_AVERAGE_RANGE = chartsConfig.hourly.movingAverageHoursRange;
 
-  // Replace the selectedDate state with the context
-  const { date: selectedDate, setDate: setSelectedDate } = useDate();
+  // State with initial values
+  const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
+  const [selectedLocation, setSelectedLocation] = useState(INITIAL_LOCATION);
+  const [selectedDate, setSelectedDate] = useState(INITIAL_DATE);
   const [selectedYear, setSelectedYear] = useState(INITIAL_DATE.getFullYear());
   const [pixelValue, setPixelValue] = useState(null);
   const [view, setView] = useState(null);
   const [hourlyChartData, setHourlyChartData] = useState(null);
   const [monthlyChartData, setMonthlyChartData] = useState(null);
   const [dailyChartData, setDailyChartData] = useState([]);
-  const [selectedVariable, setSelectedVariable] = useState(INITIAL_VARIABLE);
-  const [selectedLocation, setSelectedLocation] = useState(INITIAL_LOCATION);
   const [variableConfigApp, setVariableConfigApp] = useState(APP_CONFIG.variables[INITIAL_VARIABLE]);
 
   // Add ref for MapView component
@@ -185,7 +184,7 @@ function App() {
 
   const leftContainerStyle = {
     display: 'grid',
-    gridTemplateRows: '15fr 85fr',
+    gridTemplateRows: '15fr 55fr 30fr',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
@@ -193,9 +192,8 @@ function App() {
   };
 
   const rightContainerStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
+    display: 'grid',
+    gridTemplateRows: '65fr 35fr',
     gap: '4px',
     minHeight: 0,
     overflow: 'hidden',
@@ -543,25 +541,14 @@ function App() {
               />
             </div>
 
-            {/* Daily Chart */}
-            {/* <div style={chartContainerStyle}>
-              <DailyChart 
-                data={dailyChartData} 
-                selectedVariable={selectedVariable}
-                variableConfig={variableConfigApp}
-                onDateSelect={handleDateSelect}
-                selectedYear={selectedYear}
-              />
-            </div> */}
-
             {/* Monthly Chart */}
-            {/* <div style={chartContainerStyle}>
+            <div style={chartContainerStyle}>
               <MonthlyChart 
                 data={monthlyChartData}
                 selectedVariable={selectedVariable}
                 variableConfig={variableConfigApp}
               />
-            </div> */}
+            </div>
           </div>
 
           {/* Right Side Container */}
@@ -603,6 +590,16 @@ function App() {
                     </div>
                 )}
             </div>
+            {/* Daily Chart */}
+            <div style={chartContainerStyle}>
+              <DailyChart 
+                data={dailyChartData} 
+                selectedVariable={selectedVariable}
+                variableConfig={variableConfigApp}
+                onDateSelect={handleDateSelect}
+                selectedYear={selectedYear}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -610,10 +607,4 @@ function App() {
   );
 }
 
-export default function AppWithContext() {
-  return (
-    <DateProvider>
-      <App />
-    </DateProvider>
-  );
-}
+export default App;
