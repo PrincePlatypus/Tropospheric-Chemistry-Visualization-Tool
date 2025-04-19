@@ -807,7 +807,7 @@ const MapView = forwardRef(({
     locationGraphicRef.current = graphic;
   };
 
-  // Modify the click handler effect to use the new function
+  // Modify the click handler effect
   useEffect(() => {
     if (!viewRef.current) return;
     
@@ -820,11 +820,7 @@ const MapView = forwardRef(({
         };
         
         updateLocationMarker(location);
-        onLocationSelect(location);
-        
-        if (selectedDate) {
-          fetchData(location, selectedDate, selectedVariable, selectedYear);
-        }
+        onLocationSelect(location);  // This will trigger fetchData in App.js
       }
     });
 
@@ -833,7 +829,7 @@ const MapView = forwardRef(({
         clickHandler.remove();
       }
     };
-  }, [selectedDate, selectedVariable, selectedYear, fetchData, onLocationSelect]);
+  }, [onLocationSelect]); // Remove other dependencies
 
   // Add effect to handle location updates from props
   useEffect(() => {

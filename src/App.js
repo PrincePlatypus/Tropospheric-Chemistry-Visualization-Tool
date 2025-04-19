@@ -147,13 +147,8 @@ function App() {
   const handleLocationChange = (location) => {
     setSelectedLocation(location);
     
-    if (mapViewRef.current && selectedDate) {
-      mapViewRef.current.updateLayerTimeExtent(selectedDate);
-      mapViewRef.current.fetchLocationData(location, selectedDate, selectedVariable);
-      mapViewRef.current.fetchHourlyRangeData(location, selectedDate, selectedVariable);
-      mapViewRef.current.fetchMonthlyData(location, selectedYear, selectedVariable);
-      mapViewRef.current.fetchDailyData(location, selectedYear, selectedVariable);
-      mapViewRef.current.centerMapOnLocation(location);
+    if (selectedDate) {
+      fetchData(location, selectedDate, selectedVariable, selectedYear);
     }
   };
 

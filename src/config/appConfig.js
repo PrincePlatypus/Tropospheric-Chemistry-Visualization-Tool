@@ -205,7 +205,7 @@ export const APP_CONFIG = {
       // Settings specific to the Daily Chart (Heatmap)
       daily: {
         // Note: colorStart and colorEnd moved to variables[VAR].chartSettings
-        valueMax: 300, // Max value used for color scaling - src/components/Charts/DailyChart.jsx:L70
+        valueMax: 30000, // Max value used for color scaling - src/components/Charts/DailyChart.jsx:L70
         weekLabelInterval: 5, // How often to show week number labels - src/components/Charts/DailyChart.jsx:L93
         dayLabelWidthPx: 20, // Fixed width for day labels column - src/components/Charts/DailyChart.jsx:L5
         paddingRightPx: 20, // Right padding for the chart grid - src/components/Charts/DailyChart.jsx:L4
